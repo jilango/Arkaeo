@@ -18,19 +18,16 @@
       {
         "command": "arkaeo.analyzeSymbol",
         "title": "Arkaeo: Analyze Symbol"
+      },
+      {
+        "command": "arkaeo.setApiKey",
+        "title": "Arkaeo: Set OpenAI API Key"
+      },
+      {
+        "command": "arkaeo.clearApiKey",
+        "title": "Arkaeo: Clear OpenAI API Key"
       }
-    ],
-    "configuration": {
-      "title": "Arkaeo",
-      "properties": {
-        "arkaeo.openaiApiKey": {
-          "type": "string",
-          "default": "",
-          "description": "Optional OpenAI API key to enable AI-generated code insights.",
-          "markdownDescription": "Optional OpenAI API key. When set, adds an **Explain with AI** button to the analysis panel. The extension is fully functional without this key."
-        }
-      }
-    }
+    ]
   },
   "scripts": {
     "compile": "tsc -p ./",

@@ -14,24 +14,26 @@ import { openFileAtLine } from '../utils/vscode';
 export class PanelManager implements vscode.Disposable {
   private panel: vscode.WebviewPanel | undefined;
   private readonly extensionUri: vscode.Uri;
+  private readonly secrets: vscode.SecretStorage;
   private onExplainAi: (() => Promise<string>) | undefined;
 
-  constructor(extensionUri: vscode.Uri) {
+  constructor(extensionUri: vscode.Uri, secrets: vscode.SecretStorage) {
     this.extensionUri = extensionUri;
+    this.secrets = secrets;
   }
 
   /**
    * Opens or reveals the panel and renders the given analysis.
-   * @param analysis   - Full SymbolAnalysis to display.
+   * @param analysis    - Full SymbolAnalysis to display.
    * @param onExplainAi - Called when the user clicks "Explain with AI".
-   *                      Receives no args; should return the AI explanation text.
+   *                      Should return the AI explanation text.
    */
   show(analysis: SymbolAnalysis, onExplainAi?: () => Promise<string>): void {
     this.onExplainAi = onExplainAi;
 
     if (this.panel) {
       this.panel.reveal(vscode.ViewColumn.Beside);
-      this.updateContent(analysis);
+      void this.updateContent(analysis);
       return;
     }
 
@@ -41,7 +43,6 @@ export class PanelManager implements vscode.Disposable {
       { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
       {
         enableScripts: true,
-        // Allow both src/ui (dev) and dist (packaged VSIX) so styles load in all modes
         localResourceRoots: [
           vscode.Uri.joinPath(this.extensionUri, 'src', 'ui'),
           vscode.Uri.joinPath(this.extensionUri, 'dist'),
@@ -58,7 +59,7 @@ export class PanelManager implements vscode.Disposable {
       void this.handleMessage(raw as WebviewToExtensionMessage);
     });
 
-    this.updateContent(analysis);
+    void this.updateContent(analysis);
   }
 
   /** Sends an AI result back to the Webview. */
@@ -75,17 +76,16 @@ export class PanelManager implements vscode.Disposable {
   // Private
   // ---------------------------------------------------------------------------
 
-  private updateContent(analysis: SymbolAnalysis): void {
+  private async updateContent(analysis: SymbolAnalysis): Promise<void> {
     if (!this.panel) return;
 
     const nonce = this.generateNonce();
     const styleUri = this.panel.webview.asWebviewUri(
       vscode.Uri.joinPath(this.extensionUri, 'src', 'ui', 'styles.css'),
     );
-    // cspSource is the scheme-level allowlist (e.g. "vscode-resource:") that
-    // permits all extension-local resources — required for the stylesheet to load.
     const cspSource = this.panel.webview.cspSource;
-    const hasApiKey = this.apiKeyConfigured();
+    // Read key from the secure store — never from settings.json
+    const hasApiKey = await this.apiKeyConfigured();
 
     this.panel.title = `Arkaeo — ${analysis.symbol.name}`;
     this.panel.webview.html = renderTemplate(
@@ -123,8 +123,8 @@ export class PanelManager implements vscode.Disposable {
     return crypto.randomBytes(16).toString('hex');
   }
 
-  private apiKeyConfigured(): boolean {
-    const key = vscode.workspace.getConfiguration('arkaeo').get<string>('openaiApiKey');
+  private async apiKeyConfigured(): Promise<boolean> {
+    const key = await this.secrets.get('arkaeo.openaiApiKey');
     return typeof key === 'string' && key.trim().length > 0;
   }
 }
