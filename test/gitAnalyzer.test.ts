@@ -34,7 +34,7 @@ function mockGit(responses: Record<string, string>): void {
 // Fixture data — realistic git log output (NUL-separated fields)
 // ---------------------------------------------------------------------------
 
-const SEP = '\x00';
+const SEP = '\x1f';
 
 // Five commits, newest first
 const FIXTURE_LOG = [

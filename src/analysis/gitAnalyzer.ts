@@ -11,9 +11,11 @@ const MAX_LOG_LINES = 100;
 
 /**
  * Separator used in the git log format string.
- * Must be a string that will never appear in a commit message.
+ * Uses ASCII Unit Separator (0x1F) — safe to pass through execFile (unlike NUL
+ * which is the C string terminator and gets silently truncated by the OS),
+ * and will never appear in git hashes, ISO dates, author names, or commit messages.
  */
-const SEP = '\x00';
+const SEP = '\x1f';
 
 export class GitAnalyzer {
   constructor(private readonly workspaceRoot: string) {}
@@ -52,12 +54,14 @@ export class GitAnalyzer {
     let logOutput: string;
 
     try {
+      // --follow is NOT compatible with -L and causes git to hang on some versions.
+      // -L already traces renames internally, so --follow is omitted here.
       logOutput = await git(
         [
           'log',
           `--max-count=${MAX_LOG_LINES}`,
           `--format=%H${SEP}%aI${SEP}%an${SEP}%ae${SEP}%s`,
-          `--follow`,
+          `--no-patch`,
           `-L`,
           `${lineRange}:${relToRepo}`,
         ],
@@ -65,7 +69,7 @@ export class GitAnalyzer {
       );
     } catch {
       // -L can fail on new/untracked files or when the line range moved entirely.
-      // Fall back to file-level history.
+      // Fall back to file-level history (--follow is safe here).
       logOutput = await git(
         [
           'log',
