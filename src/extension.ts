@@ -6,9 +6,9 @@ import { PanelManager } from './ui/panel';
 import { getWorkspaceRoot } from './utils/vscode';
 
 export function activate(context: vscode.ExtensionContext): void {
-  const workspaceRoot = getWorkspaceRoot();
+  const workspaceRoot = getWorkspaceRoot() ?? context.extensionUri.fsPath;
   const astAnalyzer = getAstAnalyzer(workspaceRoot);
-  const analysisService = new AnalysisService(astAnalyzer);
+  const analysisService = new AnalysisService(astAnalyzer, workspaceRoot);
   const panelManager = new PanelManager(context.extensionUri);
 
   // Refresh ts-morph cache when a file is saved so analysis reflects latest changes.
