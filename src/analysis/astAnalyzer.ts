@@ -16,7 +16,8 @@ import type { StaticAnalysis } from '../models/analysis';
 import { toRelativePath } from '../utils/vscode';
 
 export class AstAnalyzer {
-  private project: Project;
+  /** Exposed so DependencyAnalyzer can share the same Project instance. */
+  readonly project: Project;
 
   constructor(tsConfigFilePath?: string) {
     this.project = new Project({

@@ -3,3 +3,14 @@ dist/
 dist-test/
 *.vsix
 .DS_Store
+
+# Environment files — never commit secrets
+.env
+.env.local
+.env*.local
+
+# VS Code workspace settings may contain local API keys or personal paths
+.vscode/settings.json
+
+# Vitest / Vite cache
+node_modules/.vite/

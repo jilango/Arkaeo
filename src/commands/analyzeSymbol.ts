@@ -1,15 +1,16 @@
 import * as vscode from 'vscode';
 import type { AnalysisService } from '../analysis/analysisService';
+import type { PanelManager } from '../ui/panel';
 
 /**
  * Entry point for the "Arkaeo: Analyze Symbol" command.
  *
- * Reads the active editor selection, delegates to AnalysisService, and shows
- * the result. In Phase 1 the result surfaces via a notification. The Webview
- * panel is wired in Phase 2.
+ * Reads the active editor selection, delegates to AnalysisService, and opens
+ * (or updates) the Arkaeo Webview panel with the results.
  */
 export async function analyzeSymbolCommand(
   analysisService: AnalysisService,
+  panelManager: PanelManager,
 ): Promise<void> {
   const editor = vscode.window.activeTextEditor;
   if (!editor) {
@@ -48,16 +49,7 @@ export async function analyzeSymbolCommand(
         return;
       }
 
-      // Phase 1: surface result as an information message.
-      // The Webview panel replaces this in Phase 2.
-      const { symbol } = result;
-      const label = symbol.containingClass
-        ? `${symbol.containingClass}.${symbol.name}`
-        : symbol.name;
-
-      void vscode.window.showInformationMessage(
-        `Arkaeo: Detected ${symbol.kind} "${label}" at ${symbol.location.relativePath}:${symbol.location.startLine}`,
-      );
+      panelManager.show(result);
     },
   );
 }
