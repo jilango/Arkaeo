@@ -42,13 +42,14 @@ function makeAnalysis(overrides: Partial<SymbolAnalysis> = {}): SymbolAnalysis {
 
 describe('renderTemplate', () => {
   it('includes the symbol name in the output', () => {
-    const html = renderTemplate(makeAnalysis(), 'style.css', 'testnonce', false);
+    const html = renderTemplate(makeAnalysis(), 'style.css', 'vscode-webview-resource:', 'testnonce', false);
     expect(html).toContain('processPayment');
   });
 
   it('includes all required section headings', () => {
-    const html = renderTemplate(makeAnalysis(), 'style.css', 'testnonce', false);
-    expect(html).toContain('Symbol');
+    const html = renderTemplate(makeAnalysis(), 'style.css', 'vscode-webview-resource:', 'testnonce', false);
+    // Symbol info now lives in the header (kind badge + title), not a separate section
+    expect(html).toContain('header-title');
     expect(html).toContain('Architecture');
     expect(html).toContain('Depends On');
     expect(html).toContain('Used By');
@@ -57,35 +58,35 @@ describe('renderTemplate', () => {
   });
 
   it('renders the correct risk badge class for medium level', () => {
-    const html = renderTemplate(makeAnalysis(), 'style.css', 'testnonce', false);
+    const html = renderTemplate(makeAnalysis(), 'style.css', 'vscode-webview-resource:', 'testnonce', false);
     expect(html).toContain('risk-medium');
   });
 
   it('renders risk-low badge for low risk', () => {
     const analysis = makeAnalysis({ risk: { level: 'low', score: 5, reasons: [] } });
-    const html = renderTemplate(analysis, 'style.css', 'testnonce', false);
+    const html = renderTemplate(analysis, 'style.css', 'vscode-webview-resource:', 'testnonce', false);
     expect(html).toContain('risk-low');
   });
 
   it('renders risk-high badge for high risk', () => {
     const analysis = makeAnalysis({ risk: { level: 'high', score: 80, reasons: ['Too many refs'] } });
-    const html = renderTemplate(analysis, 'style.css', 'testnonce', false);
+    const html = renderTemplate(analysis, 'style.css', 'vscode-webview-resource:', 'testnonce', false);
     expect(html).toContain('risk-high');
   });
 
   it('includes the nonce in the CSP header and script tag', () => {
-    const html = renderTemplate(makeAnalysis(), 'style.css', 'uniquenonce123', false);
+    const html = renderTemplate(makeAnalysis(), 'style.css', 'vscode-webview-resource:', 'uniquenonce123', false);
     expect(html).toContain("nonce-uniquenonce123");
     expect(html).toContain('nonce="uniquenonce123"');
   });
 
   it('does not include AI section when hasApiKey is false', () => {
-    const html = renderTemplate(makeAnalysis(), 'style.css', 'testnonce', false);
+    const html = renderTemplate(makeAnalysis(), 'style.css', 'vscode-webview-resource:', 'testnonce', false);
     expect(html).not.toContain('Explain with AI');
   });
 
   it('includes AI button when hasApiKey is true', () => {
-    const html = renderTemplate(makeAnalysis(), 'style.css', 'testnonce', true);
+    const html = renderTemplate(makeAnalysis(), 'style.css', 'vscode-webview-resource:', 'testnonce', true);
     expect(html).toContain('Explain with AI');
     expect(html).toContain('id="ai-btn"');
   });
@@ -96,7 +97,7 @@ describe('renderTemplate', () => {
       filePath: `/repo/src/file${i}.ts`,
       kind: 'reference' as const,
     }));
-    const html = renderTemplate(makeAnalysis({ dependencies: { dependsOn: [], usedBy } }), 'style.css', 'testnonce', false);
+    const html = renderTemplate(makeAnalysis({ dependencies: { dependsOn: [], usedBy } }), 'style.css', 'vscode-webview-resource:', 'testnonce', false);
     expect(html).toContain('Showing first 50 references');
   });
 
@@ -104,6 +105,7 @@ describe('renderTemplate', () => {
     const html = renderTemplate(
       makeAnalysis({ dependencies: { dependsOn: [], usedBy: [] } }),
       'style.css',
+      'vscode-webview-resource:',
       'testnonce',
       false,
     );
@@ -111,27 +113,27 @@ describe('renderTemplate', () => {
   });
 
   it('shows commit messages and author in git section', () => {
-    const html = renderTemplate(makeAnalysis(), 'style.css', 'testnonce', false);
+    const html = renderTemplate(makeAnalysis(), 'style.css', 'vscode-webview-resource:', 'testnonce', false);
     expect(html).toContain('fix payment edge case');
     expect(html).toContain('Alice');
   });
 
   it('shows "No Git history" when commitCount is 0', () => {
     const analysis = makeAnalysis({ git: { commitCount: 0, recentCommits: [] } });
-    const html = renderTemplate(analysis, 'style.css', 'testnonce', false);
+    const html = renderTemplate(analysis, 'style.css', 'vscode-webview-resource:', 'testnonce', false);
     expect(html).toContain('No Git history');
   });
 
   it('escapes HTML special characters to prevent XSS', () => {
     const analysis = makeAnalysis();
     analysis.symbol.name = '<script>alert(1)</script>';
-    const html = renderTemplate(analysis, 'style.css', 'testnonce', false);
+    const html = renderTemplate(analysis, 'style.css', 'vscode-webview-resource:', 'testnonce', false);
     expect(html).not.toContain('<script>alert(1)</script>');
     expect(html).toContain('&lt;script&gt;');
   });
 
   it('includes the signature when present', () => {
-    const html = renderTemplate(makeAnalysis(), 'style.css', 'testnonce', false);
+    const html = renderTemplate(makeAnalysis(), 'style.css', 'vscode-webview-resource:', 'testnonce', false);
     expect(html).toContain('amount: number');
   });
 });

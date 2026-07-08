@@ -78,12 +78,16 @@ export class PanelManager implements vscode.Disposable {
     const styleUri = this.panel.webview.asWebviewUri(
       vscode.Uri.joinPath(this.extensionUri, 'src', 'ui', 'styles.css'),
     );
+    // cspSource is the scheme-level allowlist (e.g. "vscode-resource:") that
+    // permits all extension-local resources — required for the stylesheet to load.
+    const cspSource = this.panel.webview.cspSource;
     const hasApiKey = this.apiKeyConfigured();
 
     this.panel.title = `Arkaeo — ${analysis.symbol.name}`;
     this.panel.webview.html = renderTemplate(
       analysis,
       styleUri.toString(),
+      cspSource,
       nonce,
       hasApiKey,
     );
