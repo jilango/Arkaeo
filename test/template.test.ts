@@ -80,9 +80,15 @@ describe('renderTemplate', () => {
     expect(html).toContain('nonce="uniquenonce123"');
   });
 
-  it('does not include AI section when hasApiKey is false', () => {
+  it('shows greyed-out AI button with setup tip when hasApiKey is false', () => {
     const html = renderTemplate(makeAnalysis(), 'style.css', 'vscode-webview-resource:', 'testnonce', false);
-    expect(html).not.toContain('Explain with AI');
+    // Button is always rendered but disabled
+    expect(html).toContain('Explain with AI');
+    expect(html).toContain('ai-button--locked');
+    expect(html).toContain('disabled');
+    // Tooltip contains setup instructions
+    expect(html).toContain('Arkaeo: Set OpenAI API Key');
+    expect(html).toContain('No API key set');
   });
 
   it('includes AI button when hasApiKey is true', () => {

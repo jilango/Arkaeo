@@ -414,6 +414,48 @@ details[open] > .section-title::before {
 .ai-button:hover  { background: var(--vscode-button-hoverBackground); }
 .ai-button:disabled { opacity: 0.5; cursor: default; }
 
+/* Locked state — no API key */
+.ai-locked-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.ai-button--locked {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: grayscale(0.4);
+}
+
+.ai-locked-tip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 10;
+  background: var(--vscode-editorHoverWidget-background, var(--vscode-editor-background));
+  border: 1px solid var(--vscode-editorHoverWidget-border, var(--vscode-panel-border));
+  color: var(--vscode-editorHoverWidget-foreground, var(--vscode-foreground));
+  font-size: 0.78rem;
+  line-height: 1.5;
+  padding: 8px 10px;
+  border-radius: 4px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  pointer-events: none;
+}
+
+.ai-locked-tip code {
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.75rem;
+  background: var(--vscode-textCodeBlock-background, rgba(128,128,128,0.15));
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.ai-locked-wrap:hover .ai-locked-tip {
+  display: block;
+}
+
 .ai-output-wrap {
   margin-top: 10px;
 }

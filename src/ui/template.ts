@@ -108,7 +108,7 @@ export function renderTemplate(
   )}
 
   <!-- ── AI Insight ── -->
-  ${hasApiKey ? renderAiSection() : ''}
+  ${renderAiSection(hasApiKey)}
 
   <div class="footer">Analyzed at ${escHtml(analyzedDate)}</div>
 
@@ -217,14 +217,36 @@ function renderCommit(c: { hash: string; date: string; message: string; author: 
   </li>`;
 }
 
-function renderAiSection(): string {
+function renderAiSection(hasApiKey: boolean): string {
+  if (hasApiKey) {
+    return `<details class="section" open>
+  <summary class="section-title">AI Insight</summary>
+  <div class="section-body">
+    <div class="ai-trigger">
+      <button class="ai-button" id="ai-btn">Explain with AI</button>
+    </div>
+    <div class="ai-output-wrap" id="ai-output"></div>
+  </div>
+</details>`;
+  }
+
+  // No key — show greyed-out button with setup instructions on hover
   return `<details class="section" open>
   <summary class="section-title">AI Insight</summary>
   <div class="section-body">
     <div class="ai-trigger">
-      <button class="ai-button" id="ai-btn">&#10024; Explain with AI</button>
+      <div class="ai-locked-wrap">
+        <button class="ai-button ai-button--locked" disabled aria-describedby="ai-locked-tip">
+          Explain with AI
+        </button>
+        <div class="ai-locked-tip" id="ai-locked-tip" role="tooltip">
+          <strong>No API key set</strong><br>
+          Open the Command Palette and run<br>
+          <code>Arkaeo: Set OpenAI API Key</code><br>
+          then re-analyze the symbol.
+        </div>
+      </div>
     </div>
-    <div class="ai-output-wrap" id="ai-output"></div>
   </div>
 </details>`;
 }
