@@ -1,0 +1,55 @@
+{
+  "name": "arkaeo",
+  "displayName": "Arkaeo",
+  "description": "Understand code before you modify it — static analysis, git history, dependency graph, and risk scoring in one place.",
+  "version": "0.1.0",
+  "publisher": "arkaeo",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [
+    "onLanguage:typescript",
+    "onLanguage:typescriptreact"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "arkaeo.analyzeSymbol",
+        "title": "Arkaeo: Analyze Symbol"
+      }
+    ],
+    "configuration": {
+      "title": "Arkaeo",
+      "properties": {
+        "arkaeo.openaiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Optional OpenAI API key to enable AI-generated code insights.",
+          "markdownDescription": "Optional OpenAI API key. When set, adds an **Explain with AI** button to the analysis panel. The extension is fully functional without this key."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "ts-morph": "^23.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  }
+}
