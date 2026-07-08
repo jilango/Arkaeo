@@ -1,12 +1,13 @@
-import type { SymbolAnalysis, RiskAssessment } from '../models/analysis';
+import * as fs from 'fs';
 import { AstAnalyzer } from './astAnalyzer';
 import { DependencyAnalyzer } from './dependencyAnalyzer';
 import { GitAnalyzer } from './gitAnalyzer';
+import { assessRisk, countTodoMarkers, daysSince } from './riskAnalyzer';
+import type { SymbolAnalysis } from '../models/analysis';
 
 /**
  * Orchestrates all analyzers and merges results into a single SymbolAnalysis.
- *
- * Phase 3: real AST + dependency + git analysis. Risk is still a stub.
+ * All phases complete as of Phase 4.
  */
 export class AnalysisService {
   private readonly deps: DependencyAnalyzer;
@@ -16,7 +17,6 @@ export class AnalysisService {
     private readonly ast: AstAnalyzer,
     workspaceRoot: string,
   ) {
-    // Share the same ts-morph Project so source files are parsed only once.
     this.deps = new DependencyAnalyzer(ast.project);
     this.git = new GitAnalyzer(workspaceRoot);
   }
@@ -29,15 +29,30 @@ export class AnalysisService {
     const symbol = this.ast.detectSymbolAtPosition(filePath, line, character);
     if (!symbol) return null;
 
-    // All three analyzers run in parallel — none depends on the others' output.
+    // All three primary analyzers run in parallel — none depends on the others.
     const [staticAnalysis, dependencies, git] = await Promise.all([
       Promise.resolve(this.ast.analyzeStatic(symbol)),
       this.deps.analyze(symbol),
       this.git.analyze(symbol),
     ]);
 
-    // Risk stub — replaced in Phase 4.
-    const risk: RiskAssessment = { level: 'low', score: 0, reasons: [] };
+    // TODO/FIXME scan — read source file synchronously (already on disk, fast).
+    let todoCount = 0;
+    try {
+      const src = fs.readFileSync(filePath, 'utf8');
+      const lines = src.split('\n');
+      todoCount = countTodoMarkers(lines, symbol.location.startLine, symbol.location.endLine);
+    } catch {
+      // Unreadable file — skip TODO scan
+    }
+
+    const risk = assessRisk({
+      referenceCount: dependencies.usedBy.length,
+      commitCount: git.commitCount,
+      daysSinceLastModify: git.lastModified ? daysSince(git.lastModified.date) : -1,
+      todoCount,
+      authorConcentration: git.primaryAuthor?.percentage,
+    });
 
     return {
       symbol,
