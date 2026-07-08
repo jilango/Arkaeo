@@ -11,7 +11,10 @@ export function activate(context: vscode.ExtensionContext): void {
   const analysisService = new AnalysisService(astAnalyzer, workspaceRoot);
   const panelManager = new PanelManager(context.extensionUri);
 
-  // Refresh ts-morph cache when a file is saved so analysis reflects latest changes.
+  // Status bar item — shown after the first successful analysis
+  const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+  statusBar.command = 'arkaeo.analyzeSymbol';
+
   const onSave = vscode.workspace.onDidSaveTextDocument((doc) => {
     if (doc.languageId === 'typescript' || doc.languageId === 'typescriptreact') {
       astAnalyzer.refreshFile(doc.uri.fsPath);
@@ -20,10 +23,10 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const analyzeCommand = vscode.commands.registerCommand(
     'arkaeo.analyzeSymbol',
-    () => analyzeSymbolCommand(analysisService, panelManager),
+    () => analyzeSymbolCommand(analysisService, panelManager, statusBar),
   );
 
-  context.subscriptions.push(analyzeCommand, onSave, panelManager);
+  context.subscriptions.push(analyzeCommand, onSave, panelManager, statusBar);
 }
 
 export function deactivate(): void {

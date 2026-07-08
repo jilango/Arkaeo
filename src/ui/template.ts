@@ -1,13 +1,8 @@
 import type { SymbolAnalysis, DependencyRef, RiskLevel } from '../models/analysis';
 
-/**
- * Renders the full Webview HTML for a given SymbolAnalysis.
- *
- * @param analysis  - The merged analysis result.
- * @param styleUri  - VS Code Webview URI for styles.css.
- * @param nonce     - CSP nonce for the inline script.
- * @param hasApiKey - Whether the user has an OpenAI API key configured.
- */
+/** Sections with more items than this are collapsed by default. */
+const COLLAPSE_THRESHOLD = 5;
+
 export function renderTemplate(
   analysis: SymbolAnalysis,
   styleUri: string,
@@ -51,34 +46,35 @@ export function renderTemplate(
       <span class="header-lines">lines ${symbol.location.startLine}–${symbol.location.endLine}</span>
     </div>
     ${symbol.signature
-      ? `<div class="header-sig">${escHtml(symbol.signature)}</div>`
+      ? `<div class="header-sig" title="${escAttr(symbol.signature)}">${escHtml(clampSignature(symbol.signature))}</div>`
       : ''}
   </div>
 
   <!-- ── Architecture ── -->
-  <div class="section">
-    <div class="section-title">Architecture</div>
-    ${kvRow('Imports', tagList(stat.imports, 'No imports'))}
-    ${kvRow('Exports', tagList(stat.exports, 'None'))}
-    ${symbol.kind === 'class' && stat.methods ? kvRow('Methods', tagList(stat.methods, 'None')) : ''}
-  </div>
+  ${collapsibleSection('Architecture',
+    kvRow('Imports', tagList(stat.imports, 'No imports')) +
+    kvRow('Exports', tagList(stat.exports, 'None')) +
+    (symbol.kind === 'class' && stat.methods ? kvRow('Methods', tagList(stat.methods, 'None')) : ''),
+    false,
+  )}
 
   <!-- ── Depends On ── -->
-  <div class="section">
-    <div class="section-title">Depends On</div>
-    ${renderDepList(dependencies.dependsOn, 'No outgoing dependencies detected')}
-  </div>
+  ${collapsibleSection(
+    `Depends On${dependencies.dependsOn.length > 0 ? ` <span class="count-badge">${dependencies.dependsOn.length}</span>` : ''}`,
+    renderDepList(dependencies.dependsOn, 'No outgoing dependencies detected'),
+    false,
+  )}
 
   <!-- ── Used By ── -->
-  <div class="section">
-    <div class="section-title">Used By</div>
-    ${renderUsedBy(dependencies.usedBy)}
-  </div>
+  ${collapsibleSection(
+    `Used By${dependencies.usedBy.length > 0 ? ` <span class="count-badge">${dependencies.usedBy.length}</span>` : ''}`,
+    renderUsedBy(dependencies.usedBy),
+    dependencies.usedBy.length > COLLAPSE_THRESHOLD,
+  )}
 
   <!-- ── Git History ── -->
-  <div class="section">
-    <div class="section-title">Git History</div>
-    ${git.commitCount === 0
+  ${collapsibleSection('Git History',
+    git.commitCount === 0
       ? '<p class="empty">No Git history found for this file.</p>'
       : `
         ${git.firstIntroduced
@@ -94,21 +90,22 @@ export function renderTemplate(
         ${git.recentCommits.length > 0
           ? `<div style="margin-top:8px"><ul class="commit-list">${git.recentCommits.map(renderCommit).join('')}</ul></div>`
           : ''}
-      `}
-  </div>
+      `,
+    false,
+  )}
 
   <!-- ── Risk ── -->
-  <div class="section">
-    <div class="section-title">Risk</div>
-    <div class="risk-row">
+  ${collapsibleSection('Risk',
+    `<div class="risk-row">
       <span class="risk-badge ${riskClass(risk.level)}">
         <span class="risk-dot"></span>${escHtml(risk.level)}
       </span>
     </div>
     ${risk.reasons.length > 0
       ? `<ul class="reason-list">${risk.reasons.map((r) => `<li class="reason-item">${escHtml(r)}</li>`).join('')}</ul>`
-      : '<p class="empty">No specific risk factors identified.</p>'}
-  </div>
+      : '<p class="empty">No specific risk factors identified.</p>'}`,
+    false,
+  )}
 
   <!-- ── AI Insight ── -->
   ${hasApiKey ? renderAiSection() : ''}
@@ -166,6 +163,20 @@ export function renderTemplate(
 // Section renderers
 // ---------------------------------------------------------------------------
 
+/**
+ * Wraps content in a <details> element.
+ * @param titleHtml - Raw HTML for the summary label (may contain badge spans).
+ * @param content   - Inner HTML of the section body.
+ * @param collapsed - Whether to render the section collapsed by default.
+ */
+function collapsibleSection(titleHtml: string, content: string, collapsed: boolean): string {
+  const open = collapsed ? '' : ' open';
+  return `<details class="section"${open}>
+  <summary class="section-title">${titleHtml}</summary>
+  <div class="section-body">${content}</div>
+</details>`;
+}
+
 function renderDepList(deps: DependencyRef[], emptyMsg: string): string {
   if (deps.length === 0) return `<p class="empty">${escHtml(emptyMsg)}</p>`;
   const items = deps
@@ -207,13 +218,15 @@ function renderCommit(c: { hash: string; date: string; message: string; author: 
 }
 
 function renderAiSection(): string {
-  return `<div class="section">
-    <div class="section-title">AI Insight</div>
+  return `<details class="section" open>
+  <summary class="section-title">AI Insight</summary>
+  <div class="section-body">
     <div class="ai-trigger">
       <button class="ai-button" id="ai-btn">&#10024; Explain with AI</button>
     </div>
     <div class="ai-output-wrap" id="ai-output"></div>
-  </div>`;
+  </div>
+</details>`;
 }
 
 // ---------------------------------------------------------------------------
@@ -240,6 +253,14 @@ function riskClass(level: RiskLevel): string {
 function shortPath(p: string): string {
   const parts = p.replace(/\\/g, '/').split('/');
   return parts.slice(-2).join('/');
+}
+
+/**
+ * Clamps a long signature to 80 chars for display. The full value is preserved
+ * in the `title` attribute of the containing element.
+ */
+function clampSignature(sig: string): string {
+  return sig.length > 80 ? sig.slice(0, 77) + '…' : sig;
 }
 
 function escHtml(s: string): string {

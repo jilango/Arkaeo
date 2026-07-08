@@ -106,7 +106,7 @@ body {
 /* ===== Sections ===== */
 
 .section {
-  padding: 12px 16px;
+  padding: 0;
   border-bottom: 1px solid var(--vscode-panel-border);
 }
 
@@ -114,13 +114,62 @@ body {
   border-bottom: none;
 }
 
+/* <details> reset */
+.section[open] > .section-body {
+  padding: 0 16px 12px;
+}
+
 .section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  list-style: none;
   font-size: 0.65rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--vscode-descriptionForeground);
-  margin: 0 0 10px;
+  margin: 0;
+  padding: 10px 16px;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Hide native arrow on all browsers */
+.section-title::-webkit-details-marker { display: none; }
+.section-title::marker { display: none; }
+
+/* Custom expand/collapse chevron */
+.section-title::before {
+  content: '›';
+  display: inline-block;
+  font-size: 0.85rem;
+  line-height: 1;
+  transition: transform 0.15s ease;
+  color: var(--vscode-descriptionForeground);
+  flex-shrink: 0;
+}
+
+details[open] > .section-title::before {
+  transform: rotate(90deg);
+}
+
+/* Inline item count badge on section headers */
+.count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  font-size: 0.65rem;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 0 5px;
+  min-width: 18px;
+  height: 14px;
+  line-height: 14px;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 /* ===== Key-value rows ===== */

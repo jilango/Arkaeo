@@ -89,9 +89,10 @@ export class DependencyAnalyzer {
   private async vscodeReferences(symbol: DetectedSymbol): Promise<DependencyRef[]> {
     try {
       const uri = vscode.Uri.file(symbol.location.filePath);
-      // Position the reference search at the start of the symbol declaration line.
-      // VS Code's reference provider resolves all call sites from there.
-      const pos = new vscode.Position(symbol.location.startLine - 1, 0);
+      // startLine is 1-based (ts-morph); VS Code Position is 0-based.
+      // nameColumn is the exact 0-based column of the identifier token so the
+      // reference provider lands on the name rather than a keyword or whitespace.
+      const pos = new vscode.Position(symbol.location.startLine - 1, symbol.location.nameColumn);
 
       const locations = await vscode.commands.executeCommand<vscode.Location[]>(
         'vscode.executeReferenceProvider',

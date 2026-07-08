@@ -160,7 +160,8 @@ export class AstAnalyzer {
         return {
           name: node.getName(),
           kind: 'function',
-          location: this.buildLocation(initializer, filePath),
+          // The name identifier is on the varDecl, not on the function node
+          location: this.buildLocation(initializer, filePath, node.getNameNode()),
           signature: this.buildSignature(initializer),
         };
       }
@@ -195,7 +196,7 @@ export class AstAnalyzer {
   private fromFunctionExpression(node: FunctionExpression, filePath: string): DetectedSymbol | null {
     const name = node.getName();
     if (!name) {
-      // Try variable declaration parent
+      // Unnamed function expression — name comes from the variable declaration
       const varDecl = node.getParentIfKind(SyntaxKind.VariableDeclaration) as
         | VariableDeclaration
         | undefined;
@@ -203,7 +204,7 @@ export class AstAnalyzer {
       return {
         name: varDecl.getName(),
         kind: 'function',
-        location: this.buildLocation(node, filePath),
+        location: this.buildLocation(node, filePath, varDecl.getNameNode()),
         signature: this.buildSignature(node),
       };
     }
@@ -224,7 +225,7 @@ export class AstAnalyzer {
     return {
       name: varDecl.getName(),
       kind: 'function',
-      location: this.buildLocation(node, filePath),
+      location: this.buildLocation(node, filePath, varDecl.getNameNode()),
       signature: this.buildSignature(node),
     };
   }
@@ -240,14 +241,33 @@ export class AstAnalyzer {
   private buildLocation(
     node: Node,
     filePath: string,
+    nameNode?: Node,
   ): DetectedSymbol['location'] {
     const start = node.getStartLineNumber(false);
     const end = node.getEndLineNumber();
+
+    // Compute the 0-based column of the identifier we want references for.
+    // If no explicit name node is given, try the node's own name node (works
+    // for FunctionDeclaration, MethodDeclaration, ClassDeclaration).
+    const resolvedNameNode =
+      nameNode ??
+      ('getNameNode' in node && typeof (node as { getNameNode?: () => Node | undefined }).getNameNode === 'function'
+        ? (node as { getNameNode: () => Node | undefined }).getNameNode()
+        : undefined);
+
+    let nameColumn = 0;
+    if (resolvedNameNode) {
+      const sf = node.getSourceFile().compilerNode;
+      const { character } = sf.getLineAndCharacterOfPosition(resolvedNameNode.getStart());
+      nameColumn = character;
+    }
+
     return {
       filePath,
       relativePath: toRelativePath(filePath),
       startLine: start,
       endLine: end,
+      nameColumn,
     };
   }
 

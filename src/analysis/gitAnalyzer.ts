@@ -20,22 +20,22 @@ const SEP = '\x1f';
 export class GitAnalyzer {
   constructor(private readonly workspaceRoot: string) {}
 
-  async analyze(symbol: DetectedSymbol): Promise<GitHistory> {
+  async analyze(symbol: DetectedSymbol, signal?: AbortSignal): Promise<GitHistory> {
     const empty: GitHistory = { commitCount: 0, recentCommits: [] };
 
     const inRepo = await isGitRepo(this.workspaceRoot);
-    if (!inRepo) return empty;
+    if (!inRepo || signal?.aborted) return empty;
 
     const gitRoot = await getGitRoot(this.workspaceRoot);
-    if (!gitRoot) return empty;
+    if (!gitRoot || signal?.aborted) return empty;
 
     // git -L requires a path relative to the repo root
     const relToRepo = path.relative(gitRoot, symbol.location.filePath);
 
     try {
-      return await this.fetchHistory(symbol, relToRepo, gitRoot);
+      return await this.fetchHistory(symbol, relToRepo, gitRoot, signal);
     } catch {
-      // File may be untracked, binary, or outside the repo — return empty gracefully
+      // File may be untracked, binary, outside the repo, or cancelled — return empty
       return empty;
     }
   }
@@ -48,6 +48,7 @@ export class GitAnalyzer {
     symbol: DetectedSymbol,
     relToRepo: string,
     gitRoot: string,
+    signal?: AbortSignal,
   ): Promise<GitHistory> {
     // Try line-range log first (most precise — traces the symbol through renames)
     const lineRange = `${symbol.location.startLine},${symbol.location.endLine}`;
@@ -66,6 +67,7 @@ export class GitAnalyzer {
           `${lineRange}:${relToRepo}`,
         ],
         gitRoot,
+        signal,
       );
     } catch {
       // -L can fail on new/untracked files or when the line range moved entirely.
@@ -80,6 +82,7 @@ export class GitAnalyzer {
           relToRepo,
         ],
         gitRoot,
+        signal,
       );
     }
 
@@ -116,7 +119,7 @@ export class GitAnalyzer {
       author: oldest.author,
     };
 
-    const primaryAuthor = await this.resolvePrimaryAuthor(relToRepo, gitRoot, commits.length);
+    const primaryAuthor = await this.resolvePrimaryAuthor(relToRepo, gitRoot, commits.length, signal);
 
     return {
       firstIntroduced,
@@ -167,6 +170,7 @@ export class GitAnalyzer {
     relToRepo: string,
     gitRoot: string,
     totalCommits: number,
+    signal?: AbortSignal,
   ): Promise<GitHistory['primaryAuthor']> {
     if (totalCommits === 0) return undefined;
 
@@ -175,6 +179,7 @@ export class GitAnalyzer {
       const shortlog = await git(
         ['shortlog', '-sne', '--', relToRepo],
         gitRoot,
+        signal,
       );
 
       if (!shortlog) return undefined;

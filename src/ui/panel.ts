@@ -41,7 +41,11 @@ export class PanelManager implements vscode.Disposable {
       { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
       {
         enableScripts: true,
-        localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, 'src', 'ui')],
+        // Allow both src/ui (dev) and dist (packaged VSIX) so styles load in all modes
+        localResourceRoots: [
+          vscode.Uri.joinPath(this.extensionUri, 'src', 'ui'),
+          vscode.Uri.joinPath(this.extensionUri, 'dist'),
+        ],
         retainContextWhenHidden: true,
       },
     );

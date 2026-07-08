@@ -7,7 +7,7 @@ import type { SymbolAnalysis } from '../models/analysis';
 
 /**
  * Orchestrates all analyzers and merges results into a single SymbolAnalysis.
- * All phases complete as of Phase 4.
+ * Accepts an optional AbortSignal so callers can cancel in-flight git work.
  */
 export class AnalysisService {
   private readonly deps: DependencyAnalyzer;
@@ -25,18 +25,20 @@ export class AnalysisService {
     filePath: string,
     line: number,
     character: number,
+    signal?: AbortSignal,
   ): Promise<SymbolAnalysis | null> {
     const symbol = this.ast.detectSymbolAtPosition(filePath, line, character);
     if (!symbol) return null;
+    if (signal?.aborted) return null;
 
-    // All three primary analyzers run in parallel — none depends on the others.
     const [staticAnalysis, dependencies, git] = await Promise.all([
       Promise.resolve(this.ast.analyzeStatic(symbol)),
       this.deps.analyze(symbol),
-      this.git.analyze(symbol),
+      this.git.analyze(symbol, signal),
     ]);
 
-    // TODO/FIXME scan — read source file synchronously (already on disk, fast).
+    if (signal?.aborted) return null;
+
     let todoCount = 0;
     try {
       const src = fs.readFileSync(filePath, 'utf8');

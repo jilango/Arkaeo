@@ -136,4 +136,66 @@ describe('renderTemplate', () => {
     const html = renderTemplate(makeAnalysis(), 'style.css', 'vscode-webview-resource:', 'testnonce', false);
     expect(html).toContain('amount: number');
   });
+
+  // ── Phase 5 additions ────────────────────────────────────────────────────
+
+  it('renders sections as <details> elements', () => {
+    const html = renderTemplate(makeAnalysis(), 'style.css', 'vscode-webview-resource:', 'testnonce', false);
+    expect(html).toContain('<details');
+    expect(html).toContain('<summary');
+  });
+
+  it('opens sections by default (non-collapsed)', () => {
+    const html = renderTemplate(makeAnalysis(), 'style.css', 'vscode-webview-resource:', 'testnonce', false);
+    // Architecture, Depends On, Git History, Risk all open by default
+    const openCount = (html.match(/<details class="section" open>/g) ?? []).length;
+    expect(openCount).toBeGreaterThanOrEqual(4);
+  });
+
+  it('collapses Used By section when it exceeds threshold', () => {
+    const usedBy = Array.from({ length: 6 }, (_, i) => ({
+      name: 'processPayment',
+      filePath: `/repo/src/file${i}.ts`,
+      kind: 'reference' as const,
+    }));
+    const html = renderTemplate(
+      makeAnalysis({ dependencies: { dependsOn: [], usedBy } }),
+      'style.css', 'vscode-webview-resource:', 'testnonce', false,
+    );
+    // Used By section should NOT have 'open' attribute when > COLLAPSE_THRESHOLD items
+    expect(html).toContain('<details class="section">');
+  });
+
+  it('shows count badge in section title when there are deps', () => {
+    const html = renderTemplate(makeAnalysis(), 'style.css', 'vscode-webview-resource:', 'testnonce', false);
+    expect(html).toContain('count-badge');
+  });
+
+  it('clamps long signatures to 80 chars with ellipsis', () => {
+    const longSig = '(' + 'a: string, '.repeat(10) + 'z: number): Promise<ComplexGenericType<A, B, C>>';
+    const analysis = makeAnalysis();
+    analysis.symbol.signature = longSig;
+    const html = renderTemplate(analysis, 'style.css', 'vscode-webview-resource:', 'testnonce', false);
+    expect(html).toContain('\u2026'); // ellipsis character
+  });
+
+  it('preserves full signature in title attribute', () => {
+    const longSig = '(' + 'a: string, '.repeat(10) + 'z: number): Promise<void>';
+    const analysis = makeAnalysis();
+    analysis.symbol.signature = longSig;
+    const html = renderTemplate(analysis, 'style.css', 'vscode-webview-resource:', 'testnonce', false);
+    // Full sig should appear in the title attr (escaped)
+    expect(html).toContain('title=');
+  });
+
+  it('does not clamp short signatures', () => {
+    const shortSig = '(id: string): User';
+    const analysis = makeAnalysis();
+    analysis.symbol.signature = shortSig;
+    const html = renderTemplate(analysis, 'style.css', 'vscode-webview-resource:', 'testnonce', false);
+    expect(html).toContain('id: string');
+    // The sig element itself must not contain an ellipsis (it may appear elsewhere in the HTML)
+    const sigMatch = html.match(/class="header-sig"[^>]*>([^<]*)</);
+    expect(sigMatch?.[1]).not.toContain('\u2026');
+  });
 });

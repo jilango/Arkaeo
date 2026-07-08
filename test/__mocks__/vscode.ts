@@ -11,6 +11,14 @@ export const window = {
   showInformationMessage: async (_msg: string) => undefined,
   showWarningMessage: async (_msg: string) => undefined,
   showErrorMessage: async (_msg: string) => undefined,
+  createStatusBarItem: (_alignment?: number, _priority?: number) => ({
+    text: '',
+    tooltip: '',
+    command: undefined as string | undefined,
+    show: () => undefined,
+    hide: () => undefined,
+    dispose: () => undefined,
+  }),
 };
 
 export const commands = {
@@ -19,7 +27,8 @@ export const commands = {
     undefined,
 };
 
-export const ProgressLocation = { Notification: 15 };
+export const ProgressLocation = { Notification: 15, Window: 10 };
+export const StatusBarAlignment = { Left: 1, Right: 2 };
 
 export class Uri {
   static file(p: string): { fsPath: string } {

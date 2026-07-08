@@ -6,17 +6,24 @@ const execFileAsync = promisify(execFile);
 /**
  * Runs a git command in the given working directory and returns trimmed stdout.
  *
- * Throws if git is not installed (ENOENT) or the command exits non-zero.
- * Callers should catch and handle gracefully.
+ * @param args   - Arguments passed to git.
+ * @param cwd    - Working directory (any path inside the repo is fine).
+ * @param signal - Optional AbortSignal; if triggered the spawned process is killed.
+ *
+ * Throws if git is not installed (ENOENT), exits non-zero, or is aborted.
  */
-export async function git(args: string[], cwd: string): Promise<string> {
+export async function git(
+  args: string[],
+  cwd: string,
+  signal?: AbortSignal,
+): Promise<string> {
   const { stdout } = await execFileAsync('git', args, {
     cwd,
-    maxBuffer: 10 * 1024 * 1024, // 10 MB — enough for large histories
-    timeout: 15_000,              // 15 s hard limit — prevents hangs on locks/pagers
+    maxBuffer: 10 * 1024 * 1024,
+    timeout: 15_000,
+    signal,
     env: {
       ...process.env,
-      // Disable interactive pager so git never waits for user input
       GIT_PAGER: 'cat',
       GIT_TERMINAL_PROMPT: '0',
     },

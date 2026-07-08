@@ -75,11 +75,21 @@ describe('detectSymbolAtPosition', () => {
     expect(symbol).toBeNull();
   });
 
-  it('populates location with filePath and line numbers', () => {
+  it('populates location with filePath, line numbers, and nameColumn', () => {
     const symbol = analyzer.detectSymbolAtPosition(FIXTURE, 12, 10);
     expect(symbol!.location.filePath).toBe(FIXTURE);
     expect(symbol!.location.startLine).toBeGreaterThan(0);
     expect(symbol!.location.endLine).toBeGreaterThanOrEqual(symbol!.location.startLine);
+    // nameColumn must point past any leading keywords (e.g. "export function ")
+    expect(symbol!.location.nameColumn).toBeGreaterThan(0);
+  });
+
+  it('nameColumn lands on the identifier for an arrow function', () => {
+    // `export const formatUser = ...` — name starts after "export const "
+    const symbol = analyzer.detectSymbolAtPosition(FIXTURE, 16, 13);
+    expect(symbol!.name).toBe('formatUser');
+    // Column 0 = 'e' of 'export', column 13 = 'f' of 'formatUser'
+    expect(symbol!.location.nameColumn).toBeGreaterThanOrEqual(13);
   });
 
   it('builds a signature string for a function', () => {
