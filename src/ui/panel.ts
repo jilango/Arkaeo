@@ -4,6 +4,7 @@ import type { SymbolAnalysis } from '../models/analysis';
 import type { WebviewToExtensionMessage, ExtensionToWebviewMessage } from './messages';
 import { renderTemplate } from './template';
 import { openFileAtLine } from '../utils/vscode';
+import { getApiKey } from '../commands/manageApiKey';
 
 /**
  * Manages the single Arkaeo Webview panel.
@@ -124,7 +125,7 @@ export class PanelManager implements vscode.Disposable {
   }
 
   private async apiKeyConfigured(): Promise<boolean> {
-    const key = await this.secrets.get('arkaeo.openaiApiKey');
+    const key = await getApiKey(this.secrets);
     return typeof key === 'string' && key.trim().length > 0;
   }
 }
