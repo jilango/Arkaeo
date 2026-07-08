@@ -1,35 +1,35 @@
 import * as vscode from 'vscode';
 
-const SECRET_KEY = 'arkaeo.openaiApiKey';
+const SECRET_KEY = 'arkaeo.anthropicApiKey';
 
 /**
- * Prompts the user for their OpenAI API key and stores it in VS Code's
+ * Prompts the user for their Anthropic API key and stores it in VS Code's
  * encrypted secrets store (OS keychain — never written to settings.json).
  */
 export async function setApiKeyCommand(secrets: vscode.SecretStorage): Promise<void> {
   const existing = await secrets.get(SECRET_KEY);
 
   const input = await vscode.window.showInputBox({
-    title: 'Arkaeo: Set OpenAI API Key',
-    prompt: 'Enter your OpenAI API key (starts with sk-…)',
-    placeHolder: 'sk-…',
+    title: 'Arkaeo: Set Anthropic API Key',
+    prompt: 'Enter your Anthropic API key (starts with sk-ant-…)',
+    placeHolder: 'sk-ant-…',
     value: existing ? '••••••••' : '',
-    password: true,   // masks input + excludes from command history
+    password: true,
     validateInput: (v) => {
       if (!v || v.trim() === '' || v === '••••••••') return 'Please enter a valid API key.';
-      if (!v.trim().startsWith('sk-')) return 'OpenAI API keys start with "sk-".';
+      if (!v.trim().startsWith('sk-ant-')) return 'Anthropic API keys start with "sk-ant-".';
       return undefined;
     },
   });
 
-  if (!input || input === '••••••••') return; // user cancelled or unchanged
+  if (!input || input === '••••••••') return;
 
   await secrets.store(SECRET_KEY, input.trim());
   void vscode.window.showInformationMessage('Arkaeo: API key saved securely.');
 }
 
 /**
- * Removes the stored API key and hides the AI section from the panel.
+ * Removes the stored API key.
  */
 export async function clearApiKeyCommand(secrets: vscode.SecretStorage): Promise<void> {
   const existing = await secrets.get(SECRET_KEY);
@@ -39,7 +39,7 @@ export async function clearApiKeyCommand(secrets: vscode.SecretStorage): Promise
   }
 
   const confirm = await vscode.window.showWarningMessage(
-    'Arkaeo: Remove your stored OpenAI API key?',
+    'Arkaeo: Remove your stored Anthropic API key?',
     { modal: true },
     'Remove',
   );
@@ -51,7 +51,6 @@ export async function clearApiKeyCommand(secrets: vscode.SecretStorage): Promise
 
 /**
  * Returns the stored API key, or undefined if not set.
- * Centralises secret access so the key never passes through settings.json.
  */
 export async function getApiKey(secrets: vscode.SecretStorage): Promise<string | undefined> {
   return secrets.get(SECRET_KEY);

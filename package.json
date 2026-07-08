@@ -21,11 +21,11 @@
       },
       {
         "command": "arkaeo.setApiKey",
-        "title": "Arkaeo: Set OpenAI API Key"
+        "title": "Arkaeo: Set Anthropic API Key"
       },
       {
         "command": "arkaeo.clearApiKey",
-        "title": "Arkaeo: Clear OpenAI API Key"
+        "title": "Arkaeo: Clear Anthropic API Key"
       }
     ]
   },

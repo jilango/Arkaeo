@@ -242,7 +242,7 @@ function renderAiSection(hasApiKey: boolean): string {
         <div class="ai-locked-tip" id="ai-locked-tip" role="tooltip">
           <strong>No API key set</strong><br>
           Open the Command Palette and run<br>
-          <code>Arkaeo: Set OpenAI API Key</code><br>
+          <code>Arkaeo: Set Anthropic API Key</code><br>
           then re-analyze the symbol.
         </div>
       </div>

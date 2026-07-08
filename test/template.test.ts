@@ -87,7 +87,7 @@ describe('renderTemplate', () => {
     expect(html).toContain('ai-button--locked');
     expect(html).toContain('disabled');
     // Tooltip contains setup instructions
-    expect(html).toContain('Arkaeo: Set OpenAI API Key');
+    expect(html).toContain('Arkaeo: Set Anthropic API Key');
     expect(html).toContain('No API key set');
   });
 

@@ -4,7 +4,7 @@ import { AnalysisService } from './analysis/analysisService';
 import { analyzeSymbolCommand } from './commands/analyzeSymbol';
 import { setApiKeyCommand, clearApiKeyCommand, getApiKey } from './commands/manageApiKey';
 import { PanelManager } from './ui/panel';
-import { OpenAIProvider } from './ai/openAIProvider';
+import { AnthropicProvider } from './ai/anthropicProvider';
 import { getWorkspaceRoot } from './utils/vscode';
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -23,9 +23,9 @@ export function activate(context: vscode.ExtensionContext): void {
   });
 
   // Re-usable helper — reads the key fresh from secrets each invocation
-  async function getProvider(): Promise<OpenAIProvider | undefined> {
+  async function getProvider(): Promise<AnthropicProvider | undefined> {
     const key = await getApiKey(context.secrets);
-    return key ? new OpenAIProvider(key) : undefined;
+    return key ? new AnthropicProvider(key) : undefined;
   }
 
   const analyzeCommand = vscode.commands.registerCommand(
