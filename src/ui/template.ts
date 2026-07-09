@@ -66,15 +66,7 @@ export function renderTemplate(
   <!-- ── Quick metrics bar ── -->
   ${renderQuickMetrics(dependencies.usedBy.length, dependencies.dependsOn.length, git)}
 
-  <!-- ── AI output panel (revealed on demand) ── -->
-  <div class="ai-result-panel" id="ai-result-panel">
-    <button type="button" class="ai-result-panel-bar" id="ai-panel-toggle" aria-expanded="true">
-      <span class="ai-result-panel-title">Engineering Summary</span>
-    </button>
-    <div id="ai-output" class="ai-output-body"></div>
-  </div>
-
-  <!-- ── Risk (top) ── -->
+  <!-- ── Risk ── -->
   ${renderRiskSection(risk)}
 
   <!-- ── Architecture ── -->
@@ -82,6 +74,14 @@ export function renderTemplate(
 
   <!-- ── Git History ── -->
   ${renderGitSection(git)}
+
+  <!-- ── AI output panel (revealed on demand, below content) ── -->
+  <div class="ai-result-panel" id="ai-result-panel">
+    <button type="button" class="ai-result-panel-bar" id="ai-panel-toggle" aria-expanded="true">
+      <span class="ai-result-panel-title">Engineering Summary</span>
+    </button>
+    <div id="ai-output" class="ai-output-body"></div>
+  </div>
 
   <div class="footer">Analyzed at ${escHtml(analyzedDate)}</div>
 
@@ -813,11 +813,17 @@ function commitTimespan(git: GitHistory): string {
   return `${days} day${days === 1 ? '' : 's'}`;
 }
 
+function riskGaugeColor(level: RiskLevel): string {
+  if (level === 'low') return '#4caf50';
+  if (level === 'medium') return '#e5c07b';
+  return '#e06c75';
+}
+
 function renderRiskSection(risk: RiskAssessment): string {
   const r = 22;
   const circ = +(2 * Math.PI * r).toFixed(1);
   const offset = +(circ * (1 - risk.score / 100)).toFixed(1);
-  const color = riskSvgColor(risk.level);
+  const color = riskGaugeColor(risk.level);
 
   const gauge = `<svg class="risk-gauge-svg" width="60" height="60" viewBox="0 0 52 52"
     aria-label="Risk score ${risk.score} out of 100">
@@ -922,13 +928,6 @@ function reasonIcon(reason: string): string {
   return '·';
 }
 
-function riskSvgColor(level: RiskLevel): string {
-  if (level === 'low') return '#4caf50';
-  if (level === 'medium') return '#e5c07b';
-  return '#e06c75';
-}
-// Keep exported for tests that may reference it indirectly
-void riskSvgColor;
 
 // ---------------------------------------------------------------------------
 // String helpers
