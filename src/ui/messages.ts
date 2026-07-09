@@ -1,4 +1,4 @@
-import type { SymbolAnalysis } from '../models/analysis';
+import type { SymbolAnalysis, DependencyRef } from '../models/analysis';
 
 // ---------------------------------------------------------------------------
 // Extension → Webview messages
@@ -19,7 +19,19 @@ export interface AiErrorMessage {
   payload: string;
 }
 
-export type ExtensionToWebviewMessage = AnalysisMessage | AiResultMessage | AiErrorMessage;
+export interface NodeExpandedMessage {
+  type: 'nodeExpanded';
+  payload: {
+    parentFilePath: string;
+    callers: DependencyRef[];
+  };
+}
+
+export type ExtensionToWebviewMessage =
+  | AnalysisMessage
+  | AiResultMessage
+  | AiErrorMessage
+  | NodeExpandedMessage;
 
 // ---------------------------------------------------------------------------
 // Webview → Extension messages
@@ -35,4 +47,14 @@ export interface OpenFileMessage {
   line?: number;
 }
 
-export type WebviewToExtensionMessage = ExplainWithAiMessage | OpenFileMessage;
+export interface ExpandNodeMessage {
+  type: 'expandNode';
+  filePath: string;
+  symbolName: string;
+  excludePaths?: string[];
+}
+
+export type WebviewToExtensionMessage =
+  | ExplainWithAiMessage
+  | OpenFileMessage
+  | ExpandNodeMessage;

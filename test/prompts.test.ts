@@ -63,7 +63,7 @@ describe('buildPrompt', () => {
     const { system } = buildPrompt(makeAnalysis());
     expect(system).toContain('Purpose');
     expect(system).toContain('Evolution');
-    expect(system).toContain('Risks & Suggestions');
+    expect(system).toContain('Before Editing');
   });
 
   it('user prompt includes symbol identity', () => {

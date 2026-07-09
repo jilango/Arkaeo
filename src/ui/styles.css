@@ -1,51 +1,60 @@
 /* ============================================================
-   Arkaeo panel styles
-   All colours come from VS Code CSS variables — adapts to any theme.
+   Arkaeo panel — lean, consistent VS Code-native styles
    ============================================================ */
 
 *,
 *::before,
-*::after {
-  box-sizing: border-box;
-}
+*::after { box-sizing: border-box; }
 
 body {
   font-family: var(--vscode-font-family);
   font-size: var(--vscode-font-size);
   color: var(--vscode-foreground);
-  background-color: var(--vscode-editor-background);
+  background: var(--vscode-editor-background);
   margin: 0;
-  padding: 0 0 40px;
+  padding: 0 0 32px;
   line-height: 1.5;
 }
 
-/* ===== Header ===== */
+/* ── Header ─────────────────────────────────────────────── */
 
 .header {
-  padding: 16px 16px 14px;
-  border-bottom: 1px solid var(--vscode-panel-border);
+  padding: 12px 16px 11px;
   background: var(--vscode-sideBar-background, var(--vscode-editor-background));
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.header-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.header-identity {
+  flex: 1;
+  min-width: 0;
+}
+
+.header-actions {
+  flex-shrink: 0;
+  padding-top: 2px;
 }
 
 .header-eyebrow {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 5px;
+  margin-bottom: 3px;
 }
 
 .kind-badge {
-  display: inline-block;
-  font-size: 0.68rem;
-  font-weight: 700;
+  font-size: 0.625rem;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.05em;
   padding: 1px 7px;
   border-radius: 20px;
-  background: var(--vscode-badge-background);
-  color: var(--vscode-badge-foreground);
 }
-
 .kind-badge.kind-function  { background: #0e639c22; color: #4ec9b0; border: 1px solid #4ec9b044; }
 .kind-badge.kind-method    { background: #6f42c122; color: #c586c0; border: 1px solid #c586c044; }
 .kind-badge.kind-class     { background: #e2c08d22; color: #dcdcaa; border: 1px solid #dcdcaa44; }
@@ -53,24 +62,23 @@ body {
 .kind-badge.kind-variable  { background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
 
 .header-class {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   color: var(--vscode-descriptionForeground);
 }
 
 .header-title {
-  font-size: 1.05rem;
-  font-weight: 700;
+  font-size: 1.1rem;
+  font-weight: 600;
   color: var(--vscode-foreground);
-  margin: 0;
+  margin: 0 0 4px;
+  line-height: 1.25;
   word-break: break-word;
-  line-height: 1.3;
 }
 
 .header-meta {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 6px;
   flex-wrap: wrap;
 }
 
@@ -82,148 +90,426 @@ body {
   background: none;
   border: none;
   padding: 0;
-  text-align: left;
 }
-
 .header-location:hover {
   text-decoration: underline;
   color: var(--vscode-textLink-activeForeground);
 }
 
 .header-lines {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: var(--vscode-descriptionForeground);
 }
 
-.header-sig {
-  margin-top: 6px;
+/* Signature toggle */
+.sig-toggle-btn {
   font-family: var(--vscode-editor-font-family, monospace);
-  font-size: 0.78rem;
+  font-size: 0.68rem;
+  background: none;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 3px;
   color: var(--vscode-descriptionForeground);
-  word-break: break-word;
+  padding: 1px 6px;
+  cursor: pointer;
+}
+.sig-toggle-btn:hover,
+.sig-toggle-btn--open {
+  background: var(--vscode-list-hoverBackground);
+  color: var(--vscode-foreground);
 }
 
-/* ===== Sections ===== */
+.sig-panel {
+  display: none;
+  margin-top: 7px;
+  background: var(--vscode-textCodeBlock-background, rgba(128,128,128,0.1));
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+  padding: 7px 10px;
+  overflow-x: auto;
+}
+.sig-code {
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.8rem;
+  color: var(--vscode-foreground);
+  white-space: pre-wrap;
+  word-break: break-word;
+  display: block;
+}
 
-.section {
-  padding: 0;
+/* ── Quick metrics bar ───────────────────────────────────── */
+
+.quick-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: var(--vscode-sideBar-background, var(--vscode-editor-background));
   border-bottom: 1px solid var(--vscode-panel-border);
 }
 
-.section:last-of-type {
-  border-bottom: none;
+.qm-card {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border-right: 1px solid var(--vscode-panel-border);
+}
+.qm-card:last-child { border-right: none; }
+
+.qm-label {
+  font-size: 0.58rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--vscode-descriptionForeground);
+  opacity: 0.8;
 }
 
-/* <details> reset */
-.section[open] > .section-body {
-  padding: 0 16px 12px;
+.qm-value {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--vscode-foreground);
+  line-height: 1.2;
 }
 
-.section-title {
+.qm-value--em {
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.qm-sub {
+  font-size: 0.68rem;
+  color: var(--vscode-descriptionForeground);
+  line-height: 1.3;
+}
+
+/* ── Collapsible sections ────────────────────────────────── */
+
+details.section {
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+details.section:last-of-type { border-bottom: none; }
+
+summary.section-header {
   display: flex;
   align-items: center;
   gap: 6px;
   list-style: none;
-  font-size: 0.65rem;
-  font-weight: 700;
+  font-size: 0.6875rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.05em;
   color: var(--vscode-descriptionForeground);
-  margin: 0;
-  padding: 10px 16px;
+  padding: 8px 16px;
   cursor: pointer;
   user-select: none;
 }
+summary.section-header::-webkit-details-marker { display: none; }
 
-/* Hide native arrow on all browsers */
-.section-title::-webkit-details-marker { display: none; }
-.section-title::marker { display: none; }
-
-/* Custom expand/collapse chevron */
-.section-title::before {
-  content: '›';
+/* Chevron — left of label, matches VS Code tree-item style */
+summary.section-header::before {
+  content: '\203A'; /* › right-pointing angle quotation */
   display: inline-block;
   font-size: 0.85rem;
+  font-weight: 400;
   line-height: 1;
-  transition: transform 0.15s ease;
-  color: var(--vscode-descriptionForeground);
   flex-shrink: 0;
+  opacity: 0.7;
+  transition: transform 0.12s ease;
+  transform-origin: center center;
 }
-
-details[open] > .section-title::before {
+details.section[open] > summary.section-header::before {
   transform: rotate(90deg);
 }
+summary.section-header:hover { color: var(--vscode-foreground); }
 
-/* Inline item count badge on section headers */
+.section-body {
+  padding: 2px 16px 12px 30px;
+}
+
+/* Count badge in section header */
 .count-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background: var(--vscode-badge-background);
   color: var(--vscode-badge-foreground);
-  font-size: 0.65rem;
-  font-weight: 700;
+  font-size: 0.6rem;
+  font-weight: 500;
   border-radius: 10px;
   padding: 0 5px;
-  min-width: 18px;
+  min-width: 16px;
   height: 14px;
   line-height: 14px;
   text-transform: none;
   letter-spacing: 0;
 }
 
-/* ===== Key-value rows ===== */
+/* ── Architecture — import/export chip rows ──────────────── */
 
-.kv-row {
+.arch-chips-block {
   display: flex;
-  gap: 8px;
-  margin-bottom: 5px;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dep-subsection--flow + .arch-chips-block {
+  margin-top: 12px;
+}
+
+.arch-row {
+  display: flex;
   align-items: flex-start;
+  gap: 10px;
+  padding: 3px 0;
 }
 
-.kv-row:last-child {
-  margin-bottom: 0;
-}
-
-.kv-label {
+.arch-label {
   font-size: 0.75rem;
   color: var(--vscode-descriptionForeground);
-  min-width: 80px;
-  flex-shrink: 0;
-  padding-top: 1px;
+  white-space: nowrap;
+  min-width: 52px;
+  padding-top: 2px;
 }
 
-.kv-value {
-  font-size: 0.82rem;
-  color: var(--vscode-foreground);
-  word-break: break-word;
-  flex: 1;
-  min-width: 0;
-}
-
-/* ===== Tag pills (imports, exports, methods) ===== */
-
-.tag-list {
+.chip-group {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
 }
 
-.tag {
-  display: inline-block;
+.chip {
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.72rem;
   background: var(--vscode-badge-background);
   color: var(--vscode-badge-foreground);
   border-radius: 3px;
-  padding: 1px 7px;
-  font-size: 0.73rem;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+.chip--export {
+  background: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+}
+
+/* Clickable import chip — button reset + link style on hover */
+.chip--link {
   font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.72rem;
+  background: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  border-radius: 3px;
+  padding: 1px 8px;
+  white-space: nowrap;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+.chip--link:hover {
+  background: var(--vscode-list-hoverBackground);
+  color: var(--vscode-textLink-foreground);
+  text-decoration: underline;
+}
+
+.empty-inline {
+  font-size: 0.75rem;
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+}
+
+/* ── Dependency lists (Depends On / Used By) ─────────────── */
+
+.dep-subsection {
+  margin-bottom: 12px;
+}
+.dep-subsection:last-child { margin-bottom: 0; }
+
+.git-meta-grid + .dep-subsection {
+  margin-top: 12px;
+}
+
+.commits-block + .dep-subsection,
+.commits-label + .dep-subsection {
+  margin-top: 14px;
+}
+
+.dep-subsection-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--vscode-descriptionForeground);
+  margin-bottom: 6px;
+}
+
+/* ── Dependency flow graph ───────────────────────────────── */
+
+.dep-graph-wrap {
+  overflow-x: auto;
+  margin-bottom: 4px;
+}
+
+.dep-graph-svg {
+  display: block;
+  max-width: 100%;
+}
+
+.dep-graph-edge {
+  stroke: var(--vscode-panel-border);
+  stroke-width: 1.5;
+  opacity: 0.85;
+}
+
+.dep-graph-edge--expand {
+  stroke-dasharray: 4 3;
+  opacity: 0.7;
+}
+
+.dep-graph-center {
+  fill: var(--vscode-badge-background);
+  stroke: var(--vscode-panel-border);
+  stroke-width: 1;
+}
+
+.dep-graph-center-label {
+  fill: var(--vscode-foreground);
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--vscode-font-family);
+}
+
+.dep-graph-overflow {
+  fill: var(--vscode-descriptionForeground);
+  font-size: 10px;
+  font-family: var(--vscode-font-family);
+}
+
+.dep-graph-fo {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 100%;
+}
+
+.dep-graph-node {
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.68rem;
+  background: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 3px;
+  padding: 2px 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 96px;
+  line-height: 1.3;
+}
+
+.dep-graph-node:hover {
+  background: var(--vscode-list-hoverBackground);
+  color: var(--vscode-textLink-foreground);
+}
+
+.dep-graph-node--external {
+  cursor: default;
+  opacity: 0.65;
+}
+
+.dep-graph-node--external:hover {
+  background: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+}
+
+.dep-graph-expand {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  font-size: 0.75rem;
+  line-height: 1;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 3px;
+  background: var(--vscode-editor-background);
+  color: var(--vscode-descriptionForeground);
+  cursor: pointer;
+}
+
+.dep-graph-expand:hover:not(:disabled) {
+  background: var(--vscode-list-hoverBackground);
+  color: var(--vscode-foreground);
+}
+
+.dep-graph-expand:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ── Change coupling heatmap ─────────────────────────────── */
+
+.cochange-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.cochange-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 1fr auto;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  padding: 4px 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+}
+
+.cochange-row:hover .cochange-label {
+  color: var(--vscode-textLink-foreground);
+  text-decoration: underline;
+}
+
+.cochange-label {
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.72rem;
+  color: var(--vscode-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* ===== Dependency list ===== */
+.cochange-bar-wrap {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 6px;
+  background: var(--vscode-panel-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.cochange-bar {
+  display: block;
+  height: 100%;
+  max-width: 100%;
+  background: var(--vscode-textLink-foreground);
+  opacity: 0.55;
+  border-radius: 3px;
+}
+
+.cochange-count {
+  font-size: 0.68rem;
+  color: var(--vscode-descriptionForeground);
+  white-space: nowrap;
+  min-width: 1.5rem;
+  text-align: right;
+}
 
 .dep-list {
   margin: 0;
@@ -231,129 +517,182 @@ details[open] > .section-title::before {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
 }
 
 .dep-item {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   min-width: 0;
 }
 
 .dep-kind-badge {
-  font-size: 0.65rem;
-  font-weight: 700;
+  font-size: 0.6rem;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.03em;
   padding: 1px 5px;
   border-radius: 3px;
   background: var(--vscode-badge-background);
   color: var(--vscode-badge-foreground);
   flex-shrink: 0;
-  opacity: 0.75;
 }
 
 .dep-file-link {
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.8rem;
   color: var(--vscode-textLink-foreground);
   cursor: pointer;
   background: none;
   border: none;
   padding: 0;
-  font-family: var(--vscode-editor-font-family, monospace);
-  font-size: 0.78rem;
   text-align: left;
-  white-space: nowrap;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  min-width: 0;
+  white-space: nowrap;
 }
-
 .dep-file-link:hover {
   text-decoration: underline;
   color: var(--vscode-textLink-activeForeground);
 }
 
-/* ===== Commit list ===== */
+/* ── Git History ─────────────────────────────────────────── */
 
-.commit-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.git-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--vscode-panel-border);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 11px;
+}
+
+.git-meta-card {
+  background: var(--vscode-sideBar-background, var(--vscode-editor-background));
+  padding: 8px 10px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 2px;
 }
 
-.commit-item {
-  border-left: 2px solid var(--vscode-panel-border);
-  padding-left: 10px;
+.git-meta-label {
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--vscode-descriptionForeground);
 }
 
-.commit-header {
+.git-meta-value {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--vscode-foreground);
+  line-height: 1.3;
+}
+
+.git-meta-sub {
+  font-size: 0.68rem;
+  color: var(--vscode-descriptionForeground);
+}
+
+.commits-label {
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--vscode-descriptionForeground);
+  margin-bottom: 6px;
+}
+
+.commits-block {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 6px;
-  margin-bottom: 1px;
+}
+
+.commit-row {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  gap: 8px;
+  align-items: baseline;
 }
 
 .commit-hash {
   font-family: var(--vscode-editor-font-family, monospace);
   font-size: 0.7rem;
-  color: var(--vscode-descriptionForeground);
   background: var(--vscode-badge-background);
-  padding: 0 4px;
-  border-radius: 2px;
-}
-
-.commit-author {
-  font-size: 0.72rem;
   color: var(--vscode-descriptionForeground);
+  padding: 1px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.commit-hash.hash-teal   { background: rgba(78,201,176,0.14); color: #4ec9b0; }
+.commit-hash.hash-purple { background: rgba(197,134,192,0.14); color: #c586c0; }
+.commit-hash.hash-green  { background: rgba(106,153,85,0.14);  color: #6a9955; }
+
+.commit-author-name {
+  font-size: 0.75rem;
+  color: var(--vscode-descriptionForeground);
+  white-space: nowrap;
 }
 
-.commit-date {
+.commit-message {
+  font-size: 0.8rem;
+  color: var(--vscode-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.commit-age {
   font-size: 0.7rem;
   color: var(--vscode-descriptionForeground);
-  margin-left: auto;
+  white-space: nowrap;
 }
 
-.commit-msg {
-  font-size: 0.82rem;
-  color: var(--vscode-foreground);
-  line-height: 1.4;
-}
+/* ── Risk ────────────────────────────────────────────────── */
 
-/* ===== Risk ===== */
-
-.risk-row {
+.risk-content {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
+  align-items: flex-start;
+  gap: 14px;
 }
+
+.risk-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.risk-gauge { flex-shrink: 0; }
+.risk-gauge-svg { display: block; }
 
 .risk-badge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   border-radius: 4px;
   padding: 3px 10px;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
 }
+.risk-badge--low    { background: #388a3420; color: #4caf50; border: 1px solid #4caf5040; }
+.risk-badge--medium { background: #cca70020; color: #e5c07b; border: 1px solid #e5c07b40; }
+.risk-badge--high   { background: #f4474720; color: #e06c75; border: 1px solid #e06c7540; }
 
 .risk-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: currentColor;
+  flex-shrink: 0;
 }
-
-.risk-low    { background: #388a3420; color: #4caf50; border: 1px solid #4caf5040; }
-.risk-medium { background: #cca70020; color: #e5c07b; border: 1px solid #e5c07b40; }
-.risk-high   { background: #f4474720; color: #e06c75; border: 1px solid #e06c7540; }
 
 .reason-list {
   margin: 0;
@@ -361,69 +700,115 @@ details[open] > .section-title::before {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 
 .reason-item {
   display: flex;
   align-items: flex-start;
-  gap: 6px;
+  gap: 7px;
   font-size: 0.8rem;
+  color: var(--vscode-foreground);
+  line-height: 1.45;
+}
+.reason-item.empty { color: var(--vscode-descriptionForeground); font-style: italic; }
+
+.reason-icon {
+  flex-shrink: 0;
+  color: var(--vscode-descriptionForeground);
+  line-height: 1.45;
+  min-width: 10px;
+}
+
+/* ── AI Insight ──────────────────────────────────────────── */
+
+/* Header-level AI button */
+.ai-button--header {
+  font-size: 0.72rem;
+  padding: 3px 9px;
+  border-radius: 20px;
+  letter-spacing: 0.02em;
+}
+
+/* AI output panel (revealed on demand) */
+.ai-result-panel {
+  border-bottom: 1px solid var(--vscode-panel-border);
+  background: var(--vscode-editor-background);
+}
+
+.ai-result-panel-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  user-select: none;
+  text-align: left;
+}
+.ai-result-panel-bar:hover .ai-result-panel-title {
   color: var(--vscode-foreground);
 }
 
-.reason-item::before {
-  content: '·';
+.ai-result-panel-title {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   color: var(--vscode-descriptionForeground);
-  flex-shrink: 0;
-  line-height: 1.5;
-}
-
-/* ===== Empty state ===== */
-
-.empty {
-  color: var(--vscode-descriptionForeground);
-  font-size: 0.8rem;
-  font-style: italic;
-  margin: 0;
-}
-
-/* ===== AI section ===== */
-
-.ai-trigger {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Match the › chevron used on section headers */
+.ai-result-panel-title::before {
+  content: '\203A';
+  display: inline-block;
+  font-size: 0.85rem;
+  font-weight: 400;
+  line-height: 1;
+  opacity: 0.7;
+  transition: transform 0.12s ease;
+  transform: rotate(90deg);
+  transform-origin: center center;
+}
+
+/* Collapsed state — chevron points right like a closed section */
+.ai-panel-bar--collapsed .ai-result-panel-title::before {
+  transform: rotate(0deg);
+}
+
+.ai-output-body {
+  padding: 2px 16px 12px 30px;
 }
 
 .ai-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
   background: var(--vscode-button-background);
   color: var(--vscode-button-foreground);
   border: none;
   border-radius: 3px;
   padding: 5px 12px;
-  font-size: 0.82rem;
-  cursor: pointer;
+  font-size: 0.8rem;
   font-family: var(--vscode-font-family);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
-
-.ai-button:hover  { background: var(--vscode-button-hoverBackground); }
+.ai-button:hover    { background: var(--vscode-button-hoverBackground); }
 .ai-button:disabled { opacity: 0.5; cursor: default; }
-
-/* Locked state — no API key */
-.ai-locked-wrap {
-  position: relative;
-  display: inline-block;
-}
 
 .ai-button--locked {
   opacity: 0.4;
   cursor: not-allowed;
-  filter: grayscale(0.4);
+}
+
+.ai-locked-wrap {
+  position: relative;
+  display: inline-block;
 }
 
 .ai-locked-tip {
@@ -435,7 +820,7 @@ details[open] > .section-title::before {
   background: var(--vscode-editorHoverWidget-background, var(--vscode-editor-background));
   border: 1px solid var(--vscode-editorHoverWidget-border, var(--vscode-panel-border));
   color: var(--vscode-editorHoverWidget-foreground, var(--vscode-foreground));
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   line-height: 1.5;
   padding: 8px 10px;
   border-radius: 4px;
@@ -443,54 +828,83 @@ details[open] > .section-title::before {
   box-shadow: 0 2px 8px rgba(0,0,0,0.25);
   pointer-events: none;
 }
-
 .ai-locked-tip code {
   font-family: var(--vscode-editor-font-family, monospace);
-  font-size: 0.75rem;
+  font-size: 0.73rem;
+  background: var(--vscode-textCodeBlock-background, rgba(128,128,128,0.15));
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+.ai-locked-wrap:hover .ai-locked-tip { display: block; }
+
+.ai-result {
+  font-size: 0.82rem;
+  color: var(--vscode-foreground);
+  line-height: 1.65;
+}
+
+.ai-heading {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--vscode-foreground);
+  margin: 12px 0 4px;
+  padding: 0;
+  letter-spacing: 0.01em;
+}
+.ai-heading:first-child { margin-top: 0; }
+
+.ai-list {
+  margin: 4px 0 8px 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.ai-list li { font-size: 0.82rem; line-height: 1.55; }
+
+.ai-para {
+  margin: 4px 0;
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.ai-code {
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.78rem;
   background: var(--vscode-textCodeBlock-background, rgba(128,128,128,0.15));
   padding: 1px 4px;
   border-radius: 2px;
 }
 
-.ai-locked-wrap:hover .ai-locked-tip {
-  display: block;
-}
-
-.ai-output-wrap {
-  margin-top: 10px;
-}
-
-.ai-output {
-  white-space: pre-wrap;
-  font-size: 0.82rem;
-  color: var(--vscode-foreground);
-  border-left: 2px solid var(--vscode-panel-border);
-  padding-left: 10px;
-  line-height: 1.6;
-}
-
 .ai-loading {
+  font-size: 0.8rem;
   color: var(--vscode-descriptionForeground);
   font-style: italic;
-  font-size: 0.8rem;
 }
 
 .ai-error {
-  color: var(--vscode-editorError-foreground);
   font-size: 0.8rem;
+  color: var(--vscode-editorError-foreground);
 }
 
-/* ===== Overflow / footer ===== */
+/* ── Misc ────────────────────────────────────────────────── */
+
+.empty {
+  font-size: 0.8rem;
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+  margin: 0;
+}
 
 .overflow-notice {
   font-size: 0.72rem;
   color: var(--vscode-descriptionForeground);
-  margin-top: 6px;
+  margin-top: 5px;
 }
 
 .footer {
   padding: 10px 16px 0;
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   color: var(--vscode-descriptionForeground);
-  opacity: 0.7;
+  opacity: 0.55;
 }

@@ -3,7 +3,7 @@ import * as crypto from 'crypto';
 import type { SymbolAnalysis } from '../models/analysis';
 import type { WebviewToExtensionMessage, ExtensionToWebviewMessage } from './messages';
 import { renderTemplate } from './template';
-import { openFileAtLine } from '../utils/vscode';
+import { openFileAtLine, findExpandedCallers } from '../utils/vscode';
 import { getApiKey } from '../commands/manageApiKey';
 
 /**
@@ -117,6 +117,19 @@ export class PanelManager implements vscode.Disposable {
           this.postMessage({ type: 'aiError', payload: message });
         }
         break;
+
+      case 'expandNode': {
+        const callers = await findExpandedCallers(
+          msg.filePath,
+          msg.symbolName,
+          msg.excludePaths ?? [],
+        );
+        this.postMessage({
+          type: 'nodeExpanded',
+          payload: { parentFilePath: msg.filePath, callers },
+        });
+        break;
+      }
     }
   }
 

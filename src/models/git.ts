@@ -18,10 +18,17 @@ export interface GitPrimaryAuthor {
   percentage: number;
 }
 
+export interface CoChangeRef {
+  filePath: string;
+  relativePath: string;
+  count: number;
+}
+
 export interface GitHistory {
   firstIntroduced?: GitAuthorRef;
   lastModified?: GitAuthorRef;
   commitCount: number;
   primaryAuthor?: GitPrimaryAuthor;
   recentCommits: GitCommitRef[];
+  coChangedWith?: CoChangeRef[];
 }

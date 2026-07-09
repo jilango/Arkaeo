@@ -22,6 +22,13 @@ function mockGit(responses: Record<string, string>): void {
   mock.mockImplementation(
     (_cmd: string, args: string[], _opts: unknown, callback: (err: unknown, result: { stdout: string; stderr: string }) => void) => {
       const joined = args.join(' ');
+      if (joined.includes('diff-tree')) {
+        const rIdx = args.indexOf('-r');
+        const hash = rIdx >= 0 ? args[rIdx + 1] : undefined;
+        const stdout = hash && responses[hash] !== undefined ? responses[hash]! : '';
+        callback(null, { stdout, stderr: '' });
+        return {} as ReturnType<typeof execFile>;
+      }
       const key = sortedKeys.find((k) => joined.includes(k));
       const stdout = key ? (responses[key] ?? '') : '';
       callback(null, { stdout, stderr: '' });
@@ -50,6 +57,15 @@ const FIXTURE_SHORTLOG = [
   '      1\tBob <bob@example.com>',
   '      1\tCharlie <charlie@example.com>',
 ].join('\n');
+
+/** diff-tree --name-only output per commit hash */
+const DIFF_TREE_FIXTURES: Record<string, string> = {
+  abc1234: 'src/payments/processor.ts\nsrc/api/routes.ts\nsrc/utils/helpers.ts',
+  def5678: 'src/payments/processor.ts\nsrc/api/routes.ts\nsrc/server.ts',
+  ghi9012: 'src/payments/processor.ts',
+  jkl3456: 'src/payments/processor.ts\nsrc/server.ts',
+  mno7890: 'src/payments/processor.ts',
+};
 
 const symbol: DetectedSymbol = {
   name: 'processPayment',
@@ -108,6 +124,7 @@ describe('GitAnalyzer', () => {
         'rev-parse --show-toplevel': '/repo',
         'log': FIXTURE_LOG,
         'shortlog': FIXTURE_SHORTLOG,
+        ...DIFF_TREE_FIXTURES,
       });
     });
 
@@ -163,6 +180,56 @@ describe('GitAnalyzer', () => {
       const messages = result.recentCommits.map((c) => c.message);
       expect(messages).toContain('fix: handle null input');
       expect(messages).toContain('refactor: extract helper');
+    });
+
+    it('returns co-changed files sorted by frequency', async () => {
+      const result = await makeAnalyzer().analyze(symbol);
+      expect(result.coChangedWith).toBeDefined();
+      expect(result.coChangedWith!.length).toBeGreaterThan(0);
+      expect(result.coChangedWith![0]!.relativePath).toBe('src/api/routes.ts');
+      expect(result.coChangedWith![0]!.count).toBe(2);
+    });
+  });
+
+  describe('aggregateCoChanges', () => {
+    it('counts files committed alongside the target', () => {
+      const groups = [
+        ['src/payments/processor.ts', 'src/api/routes.ts', 'src/utils/helpers.ts'],
+        ['src/payments/processor.ts', 'src/api/routes.ts', 'src/server.ts'],
+      ];
+      const result = makeAnalyzer().aggregateCoChanges(
+        groups,
+        'src/payments/processor.ts',
+        '/repo',
+      );
+      expect(result[0]!.relativePath).toBe('src/api/routes.ts');
+      expect(result[0]!.count).toBe(2);
+      expect(result[0]!.filePath).toBe('/repo/src/api/routes.ts');
+    });
+
+    it('excludes the target file from co-change counts', () => {
+      const groups = [
+        ['src/payments/processor.ts', 'src/api/routes.ts'],
+      ];
+      const result = makeAnalyzer().aggregateCoChanges(
+        groups,
+        'src/payments/processor.ts',
+        '/repo',
+      );
+      const paths = result.map((r) => r.relativePath);
+      expect(paths).not.toContain('src/payments/processor.ts');
+    });
+
+    it('skips commits that do not touch the target file', () => {
+      const groups = [
+        ['src/other/file.ts', 'src/api/routes.ts'],
+      ];
+      const result = makeAnalyzer().aggregateCoChanges(
+        groups,
+        'src/payments/processor.ts',
+        '/repo',
+      );
+      expect(result).toHaveLength(0);
     });
   });
 

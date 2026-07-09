@@ -1,13 +1,19 @@
 import * as path from 'path';
 import { git, isGitRepo, getGitRoot } from '../utils/git';
 import type { DetectedSymbol } from '../models/symbol';
-import type { GitHistory, GitCommitRef, GitAuthorRef } from '../models/git';
+import type { GitHistory, GitCommitRef, GitAuthorRef, CoChangeRef } from '../models/git';
 
 /** Maximum number of recent commits to surface in the UI. */
 const MAX_RECENT_COMMITS = 5;
 
 /** Maximum log entries to process (guards against extremely large histories). */
 const MAX_LOG_LINES = 100;
+
+/** Maximum co-changed files to return. */
+const MAX_COCHANGE = 8;
+
+/** Maximum commits to scan for co-change coupling (diff-tree per commit). */
+const MAX_COCHANGE_COMMITS = 30;
 
 /**
  * Separator used in the git log format string.
@@ -119,7 +125,10 @@ export class GitAnalyzer {
       author: oldest.author,
     };
 
-    const primaryAuthor = await this.resolvePrimaryAuthor(relToRepo, gitRoot, commits.length, signal);
+    const [primaryAuthor, coChangedWith] = await Promise.all([
+      this.resolvePrimaryAuthor(relToRepo, gitRoot, commits.length, signal),
+      this.fetchCoChanges(commits.map((c) => c.hash), relToRepo, gitRoot, signal),
+    ]);
 
     return {
       firstIntroduced,
@@ -127,7 +136,74 @@ export class GitAnalyzer {
       commitCount: commits.length,
       primaryAuthor,
       recentCommits,
+      coChangedWith,
     };
+  }
+
+  /**
+   * For each commit touching the symbol, lists all files in that commit via
+   * `git diff-tree` and counts how often other files appear alongside the target.
+   */
+  private async fetchCoChanges(
+    commitHashes: string[],
+    relToRepo: string,
+    gitRoot: string,
+    signal?: AbortSignal,
+  ): Promise<CoChangeRef[]> {
+    const hashes = commitHashes.slice(0, MAX_COCHANGE_COMMITS);
+    const fileLists: string[][] = [];
+
+    for (const hash of hashes) {
+      if (signal?.aborted) break;
+      try {
+        const output = await git(
+          ['diff-tree', '--no-commit-id', '--name-only', '-r', hash],
+          gitRoot,
+          signal,
+        );
+        if (!output) continue;
+        fileLists.push(
+          output.split('\n').map((line) => line.trim()).filter(Boolean),
+        );
+      } catch {
+        continue;
+      }
+    }
+
+    return this.aggregateCoChanges(fileLists, relToRepo, gitRoot);
+  }
+
+  /**
+   * Aggregates per-commit file lists into co-change frequency counts.
+   */
+  aggregateCoChanges(
+    commitFileLists: string[][],
+    relToRepo: string,
+    gitRoot: string,
+  ): CoChangeRef[] {
+    const normalizedTarget = relToRepo.replace(/\\/g, '/');
+    const counts = new Map<string, number>();
+
+    for (const files of commitFileLists) {
+      const normalized = files.map((f) => f.replace(/\\/g, '/'));
+      const touchesTarget = normalized.some((f) => f === normalizedTarget);
+      if (!touchesTarget) continue;
+
+      for (const file of normalized) {
+        if (file === normalizedTarget) continue;
+        counts.set(file, (counts.get(file) ?? 0) + 1);
+      }
+    }
+
+    const sorted = [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, MAX_COCHANGE);
+
+    return sorted.map(([relPath, count]) => ({
+      filePath: path.resolve(gitRoot, relPath),
+      relativePath: relPath,
+      count,
+    }));
   }
 
   /**
