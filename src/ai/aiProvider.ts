@@ -1,8 +1,5 @@
 /**
- * Abstraction over any AI back-end.
- *
- * Only one implementation (OpenAI) exists today. The interface keeps the rest
- * of the extension decoupled from a specific vendor.
+ * Abstraction over the AI back-end used for Engineering Summary.
  */
 export interface AiProvider {
   /**

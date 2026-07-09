@@ -9,6 +9,9 @@
   },
   "categories": ["Other"],
   "activationEvents": [
+    "onCommand:arkaeo.analyzeSymbol",
+    "onCommand:arkaeo.setApiKey",
+    "onCommand:arkaeo.clearApiKey",
     "onLanguage:typescript",
     "onLanguage:typescriptreact"
   ],

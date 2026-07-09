@@ -14,12 +14,6 @@ interface AnthropicResponse {
 
 /**
  * Anthropic Messages API implementation of `AiProvider`.
- *
- * Key differences from the OpenAI provider:
- * - Auth header is `x-api-key` (not `Authorization: Bearer`)
- * - Requires `anthropic-version` header
- * - System prompt is a top-level field, not a message in the array
- * - Response text is at `content[0].text` (not `choices[0].message.content`)
  */
 export class AnthropicProvider implements AiProvider {
   constructor(private readonly apiKey: string) {}
