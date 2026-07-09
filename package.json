@@ -10,6 +10,7 @@
   "categories": ["Other"],
   "activationEvents": [
     "onCommand:arkaeo.analyzeSymbol",
+    "onCommand:arkaeo.analyzeSymbolAt",
     "onCommand:arkaeo.setApiKey",
     "onCommand:arkaeo.clearApiKey",
     "onLanguage:typescript",
@@ -23,6 +24,10 @@
         "title": "Arkaeo: Analyze Symbol"
       },
       {
+        "command": "arkaeo.analyzeSymbolAt",
+        "title": "Arkaeo: Analyze Symbol at Position"
+      },
+      {
         "command": "arkaeo.setApiKey",
         "title": "Arkaeo: Set Anthropic API Key"
       },
@@ -30,7 +35,25 @@
         "command": "arkaeo.clearApiKey",
         "title": "Arkaeo: Clear Anthropic API Key"
       }
-    ]
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "arkaeo.analyzeSymbolAt",
+          "when": "false"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Arkaeo",
+      "properties": {
+        "arkaeo.showCodeLens": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show an \"Analyze with Arkaeo\" Code Lens above the symbol at the cursor."
+        }
+      }
+    }
   },
   "scripts": {
     "compile": "tsc -p ./",

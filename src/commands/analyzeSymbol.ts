@@ -10,6 +10,12 @@ import type { SymbolAnalysis } from '../models/analysis';
 const AI_COOLDOWN_MS = 10_000;
 let lastAiRequestAt = 0;
 
+export interface AnalyzeTarget {
+  filePath: string;
+  line: number;
+  character: number;
+}
+
 /**
  * Entry point for the "Arkaeo: Analyze Symbol" command.
  *
@@ -21,14 +27,36 @@ export async function analyzeSymbolCommand(
   panelManager: PanelManager,
   statusBar: vscode.StatusBarItem,
   aiProvider?: AiProvider,
+  target?: AnalyzeTarget,
 ): Promise<void> {
-  const editor = vscode.window.activeTextEditor;
-  if (!editor) {
-    void vscode.window.showWarningMessage('Arkaeo: Open a TypeScript file to analyze a symbol.');
+  let filePath: string;
+  let line: number;
+  let character: number;
+
+  if (target) {
+    filePath = target.filePath;
+    line = target.line;
+    character = target.character;
+  } else {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      void vscode.window.showWarningMessage('Arkaeo: Open a TypeScript file to analyze a symbol.');
+      return;
+    }
+
+    filePath = editor.document.uri.fsPath;
+    line = editor.selection.active.line;
+    character = editor.selection.active.character;
+  }
+
+  let document: vscode.TextDocument;
+  try {
+    document = await vscode.workspace.openTextDocument(vscode.Uri.file(filePath));
+  } catch {
+    void vscode.window.showWarningMessage('Arkaeo: Could not open the file to analyze.');
     return;
   }
 
-  const { document, selection } = editor;
   const languageId = document.languageId;
 
   if (languageId !== 'typescript' && languageId !== 'typescriptreact') {
@@ -50,11 +78,10 @@ export async function analyzeSymbolCommand(
       token.onCancellationRequested(() => abortController.abort());
       _progress.report({ message: 'Analyzing symbol…' });
 
-      const position = selection.active;
       const result = await analysisService.analyzeSymbol(
-        document.uri.fsPath,
-        position.line,
-        position.character,
+        filePath,
+        line,
+        character,
         abortController.signal,
       );
 

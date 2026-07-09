@@ -4,6 +4,7 @@ import { AnalysisService } from './analysis/analysisService';
 import { analyzeSymbolCommand } from './commands/analyzeSymbol';
 import { setApiKeyCommand, clearApiKeyCommand, getApiKey } from './commands/manageApiKey';
 import { PanelManager } from './ui/panel';
+import { registerCodeLensProvider } from './ui/codeLens';
 import { AnthropicProvider } from './ai/anthropicProvider';
 import { getWorkspaceRoot } from './utils/vscode';
 
@@ -33,6 +34,20 @@ export function activate(context: vscode.ExtensionContext): void {
     async () => analyzeSymbolCommand(analysisService, panelManager, statusBar, await getProvider()),
   );
 
+  const analyzeAtCommand = vscode.commands.registerCommand(
+    'arkaeo.analyzeSymbolAt',
+    async (uriString: string, line: number, character: number) => {
+      const uri = vscode.Uri.parse(uriString);
+      await analyzeSymbolCommand(analysisService, panelManager, statusBar, await getProvider(), {
+        filePath: uri.fsPath,
+        line,
+        character,
+      });
+    },
+  );
+
+  registerCodeLensProvider(astAnalyzer, context);
+
   const setKeyCommand = vscode.commands.registerCommand(
     'arkaeo.setApiKey',
     () => setApiKeyCommand(context.secrets),
@@ -43,7 +58,7 @@ export function activate(context: vscode.ExtensionContext): void {
     () => clearApiKeyCommand(context.secrets),
   );
 
-  context.subscriptions.push(analyzeCommand, setKeyCommand, clearKeyCommand, onSave, panelManager, statusBar);
+  context.subscriptions.push(analyzeCommand, analyzeAtCommand, setKeyCommand, clearKeyCommand, onSave, panelManager, statusBar);
 }
 
 export function deactivate(): void {
