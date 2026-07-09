@@ -349,6 +349,30 @@ describe('renderTemplate', () => {
     expect(html).toContain('api/routes.ts');
   });
 
+  it('merges duplicate dependsOn file paths into one graph chip with count badge', () => {
+    const analysis = makeAnalysis({
+      dependencies: {
+        dependsOn: [
+          { name: 'foo', filePath: '/repo/src/utils.ts', kind: 'import' },
+          { name: 'bar', filePath: '/repo/src/utils.ts', kind: 'import' },
+        ],
+        usedBy: [],
+      },
+    });
+    const html = renderTemplate(analysis, 'style.css', 'vscode-webview-resource:', 'testnonce', false);
+    expect(html).toContain('dep-graph-count">2</span>');
+    expect(html).toContain('title="Imported as: foo, bar"');
+    const graphStart = html.indexOf('id="dep-graph-svg"');
+    const graphEnd = html.indexOf('</svg>', graphStart);
+    const graphHtml = html.slice(graphStart, graphEnd);
+    expect(graphHtml.match(/dep-graph-node--dep" data-file="\/repo\/src\/utils.ts"/g)).toHaveLength(1);
+  });
+
+  it('omits graph count badge when a file appears only once', () => {
+    const html = renderTemplate(makeAnalysis(), 'style.css', 'vscode-webview-resource:', 'testnonce', false);
+    expect(html).not.toContain('dep-graph-count');
+  });
+
   it('renders change coupling ranked list at the bottom of Git History', () => {
     const html = renderTemplate(makeAnalysis(), 'style.css', 'vscode-webview-resource:', 'testnonce', false);
     expect(html).toContain('Change Coupling');

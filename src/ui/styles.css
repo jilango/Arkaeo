@@ -421,6 +421,23 @@ summary.section-header:hover { color: var(--vscode-foreground); }
   color: var(--vscode-textLink-foreground);
 }
 
+.dep-graph-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 4px;
+  padding: 0 4px;
+  min-width: 14px;
+  font-size: 0.55rem;
+  font-weight: 600;
+  line-height: 1.4;
+  border-radius: 8px;
+  background: var(--vscode-editor-background);
+  color: var(--vscode-descriptionForeground);
+  border: 1px solid var(--vscode-panel-border);
+  vertical-align: middle;
+}
+
 .dep-graph-node--external {
   cursor: default;
   opacity: 0.65;

@@ -601,6 +601,46 @@ const DEP_GRAPH_RIGHT_COL_X = DEP_GRAPH_CENTER_COL_X + DEP_GRAPH_CENTER_COL_W + 
 const DEP_GRAPH_EXPAND_COL_W = 150;
 const DEP_GRAPH_EXPAND_COL_GAP = 48;
 
+interface GroupedGraphNode {
+  filePath: string;
+  name: string;
+  kind: DependencyRef['kind'];
+  count: number;
+  names: string[];
+}
+
+function groupDepsByFile(refs: DependencyRef[]): GroupedGraphNode[] {
+  const map = new Map<string, GroupedGraphNode>();
+  for (const ref of refs) {
+    const existing = map.get(ref.filePath);
+    if (existing) {
+      existing.count += 1;
+      if (!existing.names.includes(ref.name)) {
+        existing.names.push(ref.name);
+      }
+    } else {
+      map.set(ref.filePath, {
+        filePath: ref.filePath,
+        name: ref.name,
+        kind: ref.kind,
+        count: 1,
+        names: [ref.name],
+      });
+    }
+  }
+  return [...map.values()];
+}
+
+function renderGraphCountBadge(count: number): string {
+  if (count <= 1) return '';
+  return `<span class="dep-graph-count">${count}</span>`;
+}
+
+function graphNodeTooltip(node: GroupedGraphNode): string {
+  if (node.count <= 1) return '';
+  return ` title="${escAttr(`Imported as: ${node.names.join(', ')}`)}"`;
+}
+
 function renderDependencyGraph(
   dependsOn: DependencyRef[],
   usedBy: DependencyRef[],
@@ -611,10 +651,12 @@ function renderDependencyGraph(
     return '';
   }
 
-  const leftNodes = usedBy.slice(0, MAX_GRAPH_NODES);
-  const rightNodes = dependsOn.slice(0, MAX_GRAPH_NODES);
-  const leftOverflow = usedBy.length - leftNodes.length;
-  const rightOverflow = dependsOn.length - rightNodes.length;
+  const groupedUsedBy = groupDepsByFile(usedBy);
+  const groupedDependsOn = groupDepsByFile(dependsOn);
+  const leftNodes = groupedUsedBy.slice(0, MAX_GRAPH_NODES);
+  const rightNodes = groupedDependsOn.slice(0, MAX_GRAPH_NODES);
+  const leftOverflow = groupedUsedBy.length - leftNodes.length;
+  const rightOverflow = groupedDependsOn.length - rightNodes.length;
 
   const maxRows = Math.max(leftNodes.length, rightNodes.length, 1);
   const height = Math.max(GRAPH_PAD_TOP + maxRows * GRAPH_ROW_HEIGHT + 20, 120);
@@ -636,7 +678,7 @@ function renderDependencyGraph(
     parts.push(`<foreignObject x="${DEP_GRAPH_LEFT_COL_X}" y="${y}" width="${DEP_GRAPH_LEFT_COL_W}" height="28" data-graph-col="left" data-graph-row="${i}">
       <div xmlns="http://www.w3.org/1999/xhtml" class="dep-graph-fo">
         <button type="button" class="dep-graph-expand" data-action="expandNode" data-file="${escAttr(node.filePath)}" title="Expand callers">+</button>
-        <button type="button" class="dep-graph-node dep-graph-node--caller" data-file="${escAttr(node.filePath)}">${label}</button>
+        <button type="button" class="dep-graph-node dep-graph-node--caller" data-file="${escAttr(node.filePath)}">${label}${renderGraphCountBadge(node.count)}</button>
       </div>
     </foreignObject>`);
   });
@@ -645,16 +687,17 @@ function renderDependencyGraph(
     const y = GRAPH_PAD_TOP + i * GRAPH_ROW_HEIGHT;
     const external = isExternalModule(node.filePath);
     const label = escHtml(external ? node.name : shortPath(node.filePath));
+    const tooltip = graphNodeTooltip(node);
     if (external) {
       parts.push(`<foreignObject x="${DEP_GRAPH_RIGHT_COL_X}" y="${y}" width="${DEP_GRAPH_RIGHT_COL_W}" height="28" data-graph-col="right" data-graph-row="${i}">
         <div xmlns="http://www.w3.org/1999/xhtml" class="dep-graph-fo">
-          <span class="dep-graph-node dep-graph-node--external">${label}</span>
+          <span class="dep-graph-node dep-graph-node--external"${tooltip}>${label}${renderGraphCountBadge(node.count)}</span>
         </div>
       </foreignObject>`);
     } else {
       parts.push(`<foreignObject x="${DEP_GRAPH_RIGHT_COL_X}" y="${y}" width="${DEP_GRAPH_RIGHT_COL_W}" height="28" data-graph-col="right" data-graph-row="${i}">
         <div xmlns="http://www.w3.org/1999/xhtml" class="dep-graph-fo">
-          <button type="button" class="dep-graph-node dep-graph-node--dep" data-file="${escAttr(node.filePath)}">${label}</button>
+          <button type="button" class="dep-graph-node dep-graph-node--dep" data-file="${escAttr(node.filePath)}"${tooltip}>${label}${renderGraphCountBadge(node.count)}</button>
         </div>
       </foreignObject>`);
     }
