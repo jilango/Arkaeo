@@ -842,7 +842,7 @@ function renderRiskSection(risk: RiskAssessment): string {
     : `<li class="reason-item empty">No specific risk factors identified.</li>`;
 
   return `<details class="section" open>
-  <summary class="section-header">Risk</summary>
+  <summary class="section-header">Risk Analysis</summary>
   <div class="section-body">
     <div class="risk-content">
       <div class="risk-left">
