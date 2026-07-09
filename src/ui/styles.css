@@ -356,27 +356,30 @@ summary.section-header:hover { color: var(--vscode-foreground); }
 }
 
 .dep-graph-edge {
-  stroke: var(--vscode-panel-border);
+  stroke: var(--vscode-descriptionForeground);
   stroke-width: 1.5;
-  opacity: 0.85;
+  stroke-linecap: round;
+  opacity: 0.5;
 }
 
-.dep-graph-edge--expand {
-  stroke-dasharray: 4 3;
-  opacity: 0.7;
+.dep-graph-fo--center {
+  justify-content: center;
+  height: 100%;
 }
 
-.dep-graph-center {
-  fill: var(--vscode-badge-background);
-  stroke: var(--vscode-panel-border);
-  stroke-width: 1;
-}
-
-.dep-graph-center-label {
-  fill: var(--vscode-foreground);
-  font-size: 11px;
+.dep-graph-node--center {
+  flex: none;
+  width: 100%;
+  max-width: 100%;
   font-weight: 600;
-  font-family: var(--vscode-font-family);
+  cursor: default;
+  text-align: center;
+}
+
+.dep-graph-node--center:hover {
+  background: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  text-decoration: none;
 }
 
 .dep-graph-overflow {
@@ -390,6 +393,8 @@ summary.section-header:hover { color: var(--vscode-foreground); }
   align-items: center;
   gap: 3px;
   height: 100%;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .dep-graph-node {
@@ -401,11 +406,14 @@ summary.section-header:hover { color: var(--vscode-foreground); }
   border-radius: 3px;
   padding: 2px 6px;
   cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 96px;
+  white-space: normal;
+  word-break: break-word;
+  overflow: visible;
+  box-sizing: border-box;
   line-height: 1.3;
+  text-align: left;
+  flex: 1;
+  min-width: 0;
 }
 
 .dep-graph-node:hover {
@@ -425,6 +433,7 @@ summary.section-header:hover { color: var(--vscode-foreground); }
 
 .dep-graph-expand {
   flex-shrink: 0;
+  align-self: center;
   width: 18px;
   height: 18px;
   padding: 0;
@@ -447,17 +456,17 @@ summary.section-header:hover { color: var(--vscode-foreground); }
   cursor: default;
 }
 
-/* ── Change coupling heatmap ─────────────────────────────── */
+/* ── Change coupling ranked list ─────────────────────────── */
 
 .cochange-list {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
 }
 
 .cochange-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
   width: 100%;
@@ -475,6 +484,14 @@ summary.section-header:hover { color: var(--vscode-foreground); }
   text-decoration: underline;
 }
 
+.cochange-rank {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--vscode-descriptionForeground);
+  min-width: 1.4rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .cochange-label {
   font-family: var(--vscode-editor-font-family, monospace);
   font-size: 0.72rem;
@@ -484,31 +501,11 @@ summary.section-header:hover { color: var(--vscode-foreground); }
   white-space: nowrap;
 }
 
-.cochange-bar-wrap {
-  display: block;
-  width: 100%;
-  min-width: 0;
-  height: 6px;
-  background: var(--vscode-panel-border);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.cochange-bar {
-  display: block;
-  height: 100%;
-  max-width: 100%;
-  background: var(--vscode-textLink-foreground);
-  opacity: 0.55;
-  border-radius: 3px;
-}
-
 .cochange-count {
-  font-size: 0.68rem;
-  color: var(--vscode-descriptionForeground);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--vscode-foreground);
   white-space: nowrap;
-  min-width: 1.5rem;
-  text-align: right;
 }
 
 .dep-list {

@@ -343,16 +343,19 @@ describe('renderTemplate', () => {
     const html = renderTemplate(makeAnalysis(), 'style.css', 'vscode-webview-resource:', 'testnonce', false);
     expect(html).toContain('dep-graph-svg');
     expect(html).toContain('Dependency Flow');
-    expect(html).toContain('dep-graph-center');
+    expect(html).toContain('dep-graph-node--center');
     expect(html).toContain('data-action="expandNode"');
     expect(html).toContain('data-symbol-name="processPayment"');
     expect(html).toContain('api/routes.ts');
   });
 
-  it('renders change coupling heatmap at the bottom of Git History', () => {
+  it('renders change coupling ranked list at the bottom of Git History', () => {
     const html = renderTemplate(makeAnalysis(), 'style.css', 'vscode-webview-resource:', 'testnonce', false);
     expect(html).toContain('Change Coupling');
     expect(html).toContain('cochange-row');
+    expect(html).toContain('cochange-rank');
+    expect(html).toContain('8 commits');
+    expect(html).not.toContain('cochange-bar');
     const commitsIdx = html.indexOf('Recent Commits');
     const couplingIdx = html.indexOf('Change Coupling');
     expect(commitsIdx).toBeGreaterThan(-1);

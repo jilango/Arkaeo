@@ -39,8 +39,15 @@ export async function openFileAtLine(filePath: string, line?: number): Promise<v
 
 const MAX_EXPAND_CALLERS = 8;
 
+const EXPORT_PATTERNS = [
+  /export\s+async\s+function\s+(\w+)/,
+  /export\s+function\s+(\w+)/,
+  /export\s+class\s+(\w+)/,
+  /export\s+const\s+(\w+)\s*=/,
+];
+
 /**
- * Finds files that reference `symbolName` from a caller file (one hierarchy level up).
+ * Finds files that reference exports from a caller file (one hierarchy level up).
  */
 export async function findExpandedCallers(
   filePath: string,
@@ -49,23 +56,31 @@ export async function findExpandedCallers(
 ): Promise<DependencyRef[]> {
   const exclude = new Set(excludePaths);
 
-  let line = 0;
-  let col = 0;
-  try {
-    const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(filePath));
-    const text = doc.getText();
-    const idx = text.indexOf(symbolName);
-    if (idx < 0) return [];
-    const position = doc.positionAt(idx);
-    line = position.line;
-    col = position.character;
-  } catch {
-    return [];
-  }
-
   try {
     const uri = vscode.Uri.file(filePath);
-    const pos = new vscode.Position(line, col);
+    const doc = await vscode.workspace.openTextDocument(uri);
+    const text = doc.getText();
+
+    let refName: string | undefined;
+    let refIndex = -1;
+
+    for (const pattern of EXPORT_PATTERNS) {
+      const match = text.match(pattern);
+      if (match?.[1]) {
+        refName = match[1];
+        refIndex = text.indexOf(refName);
+        break;
+      }
+    }
+
+    if (refIndex < 0 && symbolName) {
+      refIndex = text.indexOf(symbolName);
+      refName = symbolName;
+    }
+
+    if (refIndex < 0 || !refName) return [];
+
+    const pos = doc.positionAt(refIndex);
     const locations = await vscode.commands.executeCommand<vscode.Location[]>(
       'vscode.executeReferenceProvider',
       uri,
@@ -81,7 +96,7 @@ export async function findExpandedCallers(
       if (exclude.has(refPath)) continue;
       if (seen.has(refPath)) continue;
       seen.add(refPath);
-      refs.push({ name: symbolName, filePath: refPath, kind: 'reference' });
+      refs.push({ name: refName, filePath: refPath, kind: 'reference' });
       if (refs.length >= MAX_EXPAND_CALLERS) break;
     }
     return refs;

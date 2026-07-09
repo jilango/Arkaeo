@@ -78,7 +78,7 @@ export function renderTemplate(
   ${renderRiskSection(risk)}
 
   <!-- ── Architecture ── -->
-  ${renderArchitectureSection(stat, dependencies.dependsOn, dependencies.usedBy, symbolLabel)}
+  ${renderArchitectureSection(stat, dependencies.dependsOn, dependencies.usedBy, symbolLabel, symbol.location.filePath)}
 
   <!-- ── Git History ── -->
   ${renderGitSection(git)}
@@ -87,6 +87,196 @@ export function renderTemplate(
 
   <script nonce="${nonce}">
     const vscode = acquireVsCodeApi();
+    const DEP_GRAPH = {
+      PAD_TOP: ${GRAPH_PAD_TOP},
+      ROW_GAP: 8,
+      LEFT_COL_X: ${DEP_GRAPH_LEFT_COL_X},
+      LEFT_COL_W: ${DEP_GRAPH_LEFT_COL_W},
+      CENTER_COL_X: ${DEP_GRAPH_CENTER_COL_X},
+      CENTER_COL_W: ${DEP_GRAPH_CENTER_COL_W},
+      RIGHT_COL_X: ${DEP_GRAPH_RIGHT_COL_X},
+      RIGHT_COL_W: ${DEP_GRAPH_RIGHT_COL_W},
+      EXPAND_COL_W: ${DEP_GRAPH_EXPAND_COL_W},
+      EXPAND_COL_GAP: ${DEP_GRAPH_EXPAND_COL_GAP},
+    };
+
+    function graphBezierPath(x1, y1, x2, y2) {
+      const mx = (x1 + x2) / 2;
+      if (Math.abs(y1 - y2) < 1) {
+        const bend = 14;
+        return 'M ' + x1 + ',' + y1 + ' C ' + mx + ',' + (y1 - bend) + ' ' + mx + ',' + (y2 + bend) + ' ' + x2 + ',' + y2;
+      }
+      return 'M ' + x1 + ',' + y1 + ' C ' + mx + ',' + y1 + ' ' + mx + ',' + y2 + ' ' + x2 + ',' + y2;
+    }
+
+    function toSvgPoint(svg, clientX, clientY) {
+      const pt = svg.createSVGPoint();
+      pt.x = clientX;
+      pt.y = clientY;
+      const ctm = svg.getScreenCTM();
+      if (!ctm) return { x: clientX, y: clientY };
+      const sp = pt.matrixTransform(ctm.inverse());
+      return { x: sp.x, y: sp.y };
+    }
+
+    function chipAnchor(svg, chipEl, side) {
+      const r = chipEl.getBoundingClientRect();
+      const overlap = 1;
+      let x = side === 'right' ? r.right - overlap : side === 'left' ? r.left + overlap : r.left + r.width / 2;
+      const y = r.top + r.height / 2;
+      return toSvgPoint(svg, x, y);
+    }
+
+    function colWidthFor(fo) {
+      const col = fo.getAttribute('data-graph-col');
+      if (col === 'left') return DEP_GRAPH.LEFT_COL_W;
+      if (col === 'right') return DEP_GRAPH.RIGHT_COL_W;
+      if (col === 'expand') return DEP_GRAPH.EXPAND_COL_W;
+      return DEP_GRAPH.CENTER_COL_W;
+    }
+
+    function fitForeignObject(fo) {
+      const inner = fo.querySelector('.dep-graph-fo');
+      if (!inner) return;
+      const colW = colWidthFor(fo);
+      inner.style.width = colW + 'px';
+      const h = inner.scrollHeight;
+      fo.setAttribute('width', String(colW));
+      fo.setAttribute('height', String(Math.max(h, 20)));
+    }
+
+    function findMainCallerChip(svg, filePath) {
+      const chips = svg.querySelectorAll('.dep-graph-node--caller[data-file]');
+      for (let i = 0; i < chips.length; i++) {
+        const chip = chips[i];
+        if (chip.dataset.file !== filePath) continue;
+        const fo = chip.closest('foreignObject');
+        if (fo && fo.querySelector('.dep-graph-expand')) return chip;
+      }
+      return null;
+    }
+
+    function addGraphEdge(g, svg, fromEl, fromSide, toEl, toSide, extraClass) {
+      const p1 = chipAnchor(svg, fromEl, fromSide);
+      const p2 = chipAnchor(svg, toEl, toSide);
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('class', 'dep-graph-edge ' + extraClass);
+      path.setAttribute('d', graphBezierPath(p1.x, p1.y, p2.x, p2.y));
+      path.setAttribute('fill', 'none');
+      g.appendChild(path);
+    }
+
+    function drawDependencyEdges(svg) {
+      let edgesG = svg.querySelector('#dep-graph-edges');
+      if (!edgesG) {
+        edgesG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        edgesG.id = 'dep-graph-edges';
+        svg.insertBefore(edgesG, svg.firstChild);
+      }
+      edgesG.innerHTML = '';
+
+      const center = svg.querySelector('.dep-graph-node--center');
+      if (!center) return;
+
+      svg.querySelectorAll('.dep-graph-fo').forEach(function(fo) {
+        if (!fo.querySelector('.dep-graph-expand')) return;
+        const caller = fo.querySelector('.dep-graph-node--caller');
+        if (caller) addGraphEdge(edgesG, svg, caller, 'right', center, 'left', 'dep-graph-edge--in');
+      });
+
+      svg.querySelectorAll('.dep-graph-node--dep, .dep-graph-node--external').forEach(function(dep) {
+        addGraphEdge(edgesG, svg, center, 'right', dep, 'left', 'dep-graph-edge--out');
+      });
+
+      svg.querySelectorAll('g[data-expansion-for]').forEach(function(expG) {
+        const parentPath = expG.getAttribute('data-expansion-for');
+        const parentChip = findMainCallerChip(svg, parentPath);
+        if (!parentChip) return;
+        expG.querySelectorAll('.dep-graph-node--caller').forEach(function(expCaller) {
+          addGraphEdge(edgesG, svg, expCaller, 'right', parentChip, 'left', 'dep-graph-edge--in');
+        });
+      });
+    }
+
+    function positionExpansionColumns(svg) {
+      svg.querySelectorAll('g[data-expansion-for]').forEach(function(expG) {
+        const parentPath = expG.getAttribute('data-expansion-for');
+        const parentChip = findMainCallerChip(svg, parentPath);
+        if (!parentChip) return;
+        const parentLeft = chipAnchor(svg, parentChip, 'left');
+        const expFos = Array.from(expG.querySelectorAll('foreignObject'));
+        expFos.forEach(fitForeignObject);
+        const gap = 6;
+        const totalH = expFos.reduce(function(sum, fo, i) {
+          return sum + parseFloat(fo.getAttribute('height') || '0') + (i > 0 ? gap : 0);
+        }, 0);
+        let curY = parentLeft.y - totalH / 2;
+        expFos.forEach(function(fo) {
+          const w = parseFloat(fo.getAttribute('width') || '0');
+          const h = parseFloat(fo.getAttribute('height') || '0');
+          fo.setAttribute('x', String(parentLeft.x - DEP_GRAPH.EXPAND_COL_GAP - w));
+          fo.setAttribute('y', String(curY));
+          curY += h + gap;
+        });
+      });
+    }
+
+    function adjustGraphViewBox(svg) {
+      const svgW = parseFloat(svg.getAttribute('width') || '${GRAPH_WIDTH}');
+      const svgH = parseFloat(svg.getAttribute('height') || '120');
+      let minX = 0;
+      svg.querySelectorAll('foreignObject').forEach(function(fo) {
+        const x = parseFloat(fo.getAttribute('x') || '0');
+        if (x < minX) minX = x;
+      });
+      const padding = 8;
+      const vbMinX = minX < 0 ? minX - padding : 0;
+      const vbW = svgW - vbMinX;
+      svg.setAttribute('viewBox', vbMinX + ' 0 ' + vbW + ' ' + svgH);
+    }
+
+    function relayoutDependencyGraph() {
+      const svg = depGraphSvg;
+      if (!svg) return;
+
+      const rowIndices = [];
+      svg.querySelectorAll('foreignObject[data-graph-row]').forEach(function(fo) {
+        const row = fo.getAttribute('data-graph-row');
+        if (row !== null && rowIndices.indexOf(row) === -1) rowIndices.push(row);
+      });
+      rowIndices.sort(function(a, b) { return Number(a) - Number(b); });
+
+      let y = DEP_GRAPH.PAD_TOP;
+      rowIndices.forEach(function(rowKey) {
+        const fos = Array.from(svg.querySelectorAll('foreignObject[data-graph-row="' + rowKey + '"]'));
+        let maxH = 0;
+        fos.forEach(function(fo) {
+          fitForeignObject(fo);
+          maxH = Math.max(maxH, parseFloat(fo.getAttribute('height') || '0'));
+        });
+        const rowCenterY = y + maxH / 2;
+        fos.forEach(function(fo) {
+          const foH = parseFloat(fo.getAttribute('height') || '0');
+          fo.setAttribute('y', String(y + (maxH - foH) / 2));
+          const expandBtn = fo.querySelector('.dep-graph-expand');
+          if (expandBtn) expandBtn.setAttribute('data-node-y', String(rowCenterY));
+        });
+        y += maxH + DEP_GRAPH.ROW_GAP;
+      });
+
+      const centerFo = svg.querySelector('foreignObject[data-graph-col="center"]');
+      const svgH = Math.max(y + 20, 120);
+      svg.setAttribute('height', String(svgH));
+      if (centerFo) {
+        fitForeignObject(centerFo);
+        const centerH = parseFloat(centerFo.getAttribute('height') || '32');
+        centerFo.setAttribute('y', String((svgH - centerH) / 2));
+      }
+
+      positionExpansionColumns(svg);
+      adjustGraphViewBox(svg);
+      drawDependencyEdges(svg);
+    }
 
     document.addEventListener('click', (e) => {
       const target = e.target;
@@ -97,7 +287,13 @@ export function renderTemplate(
         const depGraph = document.getElementById('dep-graph');
         const symbolName = depGraph ? depGraph.dataset.symbolName : '';
         if (!filePath || !symbolName) return;
-        const excludePaths = collectGraphPaths();
+        const sourceFile = depGraph ? depGraph.dataset.sourceFile : '';
+        const excludePaths = [filePath];
+        if (sourceFile) excludePaths.push(sourceFile);
+        document.querySelectorAll('.dep-graph-node--caller[data-file]').forEach((el) => {
+          const p = el.dataset.file;
+          if (p) excludePaths.push(p);
+        });
         target.disabled = true;
         target.textContent = '\\u2026';
         vscode.postMessage({ type: 'expandNode', filePath, symbolName, excludePaths });
@@ -111,20 +307,25 @@ export function renderTemplate(
       vscode.postMessage({ type: 'openFile', filePath, line });
     });
 
-    function collectGraphPaths() {
-      const paths = [];
-      document.querySelectorAll('[data-file]').forEach((el) => {
-        const p = el.dataset.file;
-        if (p) paths.push(p);
-      });
-      return paths;
-    }
-
     const depGraphSvg = document.getElementById('dep-graph-svg');
 
     function shortPathClient(p) {
       const parts = String(p).replace(/\\\\/g, '/').split('/');
       return parts.slice(-2).join('/');
+    }
+
+    function handleNodeExpanded(payload) {
+      const parentFilePath = payload ? payload.parentFilePath : '';
+      const expandBtn = document.querySelector('.dep-graph-expand[data-file="' + parentFilePath.replace(/"/g, '\\\\"') + '"]');
+      if (!payload || !payload.callers || payload.callers.length === 0) {
+        if (expandBtn) {
+          expandBtn.disabled = false;
+          expandBtn.textContent = '+';
+          expandBtn.title = 'No further callers';
+        }
+        return;
+      }
+      appendExpansionColumn(payload);
     }
 
     function appendExpansionColumn(payload) {
@@ -133,43 +334,27 @@ export function renderTemplate(
       const expandBtn = document.querySelector('.dep-graph-expand[data-file="' + parentFilePath.replace(/"/g, '\\\\"') + '"]');
       if (expandBtn) {
         expandBtn.textContent = '\\u2713';
+        expandBtn.title = 'Expanded';
       }
       if (depGraphSvg.querySelector('[data-expansion-for="' + parentFilePath.replace(/"/g, '\\\\"') + '"]')) return;
-
-      const parentY = expandBtn ? parseInt(expandBtn.getAttribute('data-node-y') || '60', 10) : 60;
-      const svgW = parseInt(depGraphSvg.getAttribute('width') || '560', 10);
-      const svgH = parseInt(depGraphSvg.getAttribute('height') || '120', 10);
-
-      if (!depGraphSvg.dataset.expandedWidth) {
-        depGraphSvg.setAttribute('width', String(svgW + 140));
-        depGraphSvg.setAttribute('viewBox', '-140 0 ' + (svgW + 140) + ' ' + svgH);
-        depGraphSvg.dataset.expandedWidth = '1';
-      }
 
       const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
       g.setAttribute('data-expansion-for', parentFilePath);
 
-      payload.callers.forEach(function(caller, i) {
-        const spread = payload.callers.length > 1 ? (payload.callers.length - 1) * 22 : 0;
-        const y = parentY - spread / 2 + i * 22;
-
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.setAttribute('class', 'dep-graph-edge dep-graph-edge--expand');
-        path.setAttribute('d', 'M -10,' + y + ' C 20,' + y + ' 40,' + parentY + ' 70,' + parentY);
-        path.setAttribute('fill', 'none');
-        g.appendChild(path);
-
+      payload.callers.forEach(function(caller) {
         const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
-        fo.setAttribute('x', '-132');
-        fo.setAttribute('y', String(y - 14));
-        fo.setAttribute('width', '120');
-        fo.setAttribute('height', '28');
+        fo.setAttribute('data-graph-col', 'expand');
+        fo.setAttribute('x', '0');
+        fo.setAttribute('y', '0');
+        fo.setAttribute('width', String(DEP_GRAPH.EXPAND_COL_W));
+        fo.setAttribute('height', '20');
         const label = esc(shortPathClient(caller.filePath));
         fo.innerHTML = '<div xmlns="http://www.w3.org/1999/xhtml" class="dep-graph-fo"><button type="button" class="dep-graph-node dep-graph-node--caller" data-file="' + esc(caller.filePath) + '">' + label + '</button></div>';
         g.appendChild(fo);
       });
 
       depGraphSvg.appendChild(g);
+      relayoutDependencyGraph();
     }
 
     const aiBtn = document.getElementById('ai-btn');
@@ -210,7 +395,7 @@ export function renderTemplate(
         aiOutput.innerHTML = '<div class="ai-error">\u26a0\ufe0f ' + esc(msg.payload) + '</div>';
         if (aiBtn) aiBtn.disabled = false;
       } else if (msg.type === 'nodeExpanded') {
-        appendExpansionColumn(msg.payload);
+        handleNodeExpanded(msg.payload);
       }
     });
 
@@ -265,6 +450,10 @@ export function renderTemplate(
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
     }
+
+    if (depGraphSvg) {
+      requestAnimationFrame(function() { relayoutDependencyGraph(); });
+    }
   </script>
 </body>
 </html>`;
@@ -313,6 +502,7 @@ function renderArchitectureSection(
   dependsOn: DependencyRef[],
   usedBy: DependencyRef[],
   symbolName: string,
+  sourceFilePath: string,
 ): string {
   // Build a lookup: import name → filePath from dependsOn (for clickable chips)
   const depFileMap = new Map<string, string>();
@@ -368,7 +558,7 @@ function renderArchitectureSection(
     : '<p class="empty">No references found in the workspace.</p>';
 
   const totalDeps = dependsOn.length + usedBy.length;
-  const dependencyGraph = renderDependencyGraph(dependsOn, usedBy, symbolName);
+  const dependencyGraph = renderDependencyGraph(dependsOn, usedBy, symbolName, sourceFilePath);
 
   return `<details class="section" open>
   <summary class="section-header">Architecture</summary>
@@ -397,14 +587,25 @@ function renderArchitectureSection(
 }
 
 const MAX_GRAPH_NODES = 6;
-const GRAPH_WIDTH = 560;
+const GRAPH_WIDTH = 616;
 const GRAPH_ROW_HEIGHT = 50;
 const GRAPH_PAD_TOP = 36;
+
+const DEP_GRAPH_LEFT_COL_X = 8;
+const DEP_GRAPH_LEFT_COL_W = 168;
+const DEP_GRAPH_COL_GAP = 48;
+const DEP_GRAPH_CENTER_COL_W = 160;
+const DEP_GRAPH_CENTER_COL_X = DEP_GRAPH_LEFT_COL_X + DEP_GRAPH_LEFT_COL_W + DEP_GRAPH_COL_GAP;
+const DEP_GRAPH_RIGHT_COL_W = 168;
+const DEP_GRAPH_RIGHT_COL_X = DEP_GRAPH_CENTER_COL_X + DEP_GRAPH_CENTER_COL_W + DEP_GRAPH_COL_GAP;
+const DEP_GRAPH_EXPAND_COL_W = 150;
+const DEP_GRAPH_EXPAND_COL_GAP = 48;
 
 function renderDependencyGraph(
   dependsOn: DependencyRef[],
   usedBy: DependencyRef[],
   symbolName: string,
+  sourceFilePath: string,
 ): string {
   if (dependsOn.length === 0 && usedBy.length === 0) {
     return '';
@@ -417,39 +618,24 @@ function renderDependencyGraph(
 
   const maxRows = Math.max(leftNodes.length, rightNodes.length, 1);
   const height = Math.max(GRAPH_PAD_TOP + maxRows * GRAPH_ROW_HEIGHT + 20, 120);
-  const centerY = height / 2;
-  const centerLabel = truncateGraphLabel(symbolName, 24);
+  const centerLabel = escHtml(symbolName);
 
-  const centerX = 200;
-  const centerW = 160;
-  const parts: string[] = [];
+  const parts: string[] = [
+    '<g id="dep-graph-edges"></g>',
+  ];
 
-  for (let i = 0; i < leftNodes.length; i++) {
-    const y = GRAPH_PAD_TOP + i * GRAPH_ROW_HEIGHT + GRAPH_ROW_HEIGHT / 2;
-    parts.push(
-      `<path class="dep-graph-edge dep-graph-edge--in" d="M 130,${y} C 165,${y} 165,${centerY} ${centerX},${centerY}" fill="none"/>`,
-    );
-  }
-
-  for (let i = 0; i < rightNodes.length; i++) {
-    const y = GRAPH_PAD_TOP + i * GRAPH_ROW_HEIGHT + GRAPH_ROW_HEIGHT / 2;
-    parts.push(
-      `<path class="dep-graph-edge dep-graph-edge--out" d="M ${centerX + centerW},${centerY} C 395,${centerY} 395,${y} 430,${y}" fill="none"/>`,
-    );
-  }
-
-  parts.push(
-    `<rect class="dep-graph-center" x="${centerX}" y="${centerY - 16}" width="${centerW}" height="32" rx="4"/>`,
-    `<text class="dep-graph-center-label" x="${centerX + centerW / 2}" y="${centerY + 5}" text-anchor="middle">${escHtml(centerLabel)}</text>`,
-  );
+  parts.push(`<foreignObject x="${DEP_GRAPH_CENTER_COL_X}" y="0" width="${DEP_GRAPH_CENTER_COL_W}" height="32" data-graph-col="center">
+      <div xmlns="http://www.w3.org/1999/xhtml" class="dep-graph-fo dep-graph-fo--center">
+        <span class="dep-graph-node dep-graph-node--center">${centerLabel}</span>
+      </div>
+    </foreignObject>`);
 
   leftNodes.forEach((node, i) => {
     const y = GRAPH_PAD_TOP + i * GRAPH_ROW_HEIGHT;
-    const nodeY = y + GRAPH_ROW_HEIGHT / 2;
-    const label = escHtml(truncateGraphLabel(shortPath(node.filePath)));
-    parts.push(`<foreignObject x="8" y="${y}" width="122" height="28">
+    const label = escHtml(shortPath(node.filePath));
+    parts.push(`<foreignObject x="${DEP_GRAPH_LEFT_COL_X}" y="${y}" width="${DEP_GRAPH_LEFT_COL_W}" height="28" data-graph-col="left" data-graph-row="${i}">
       <div xmlns="http://www.w3.org/1999/xhtml" class="dep-graph-fo">
-        <button type="button" class="dep-graph-expand" data-action="expandNode" data-file="${escAttr(node.filePath)}" data-node-y="${nodeY}" title="Expand callers">+</button>
+        <button type="button" class="dep-graph-expand" data-action="expandNode" data-file="${escAttr(node.filePath)}" title="Expand callers">+</button>
         <button type="button" class="dep-graph-node dep-graph-node--caller" data-file="${escAttr(node.filePath)}">${label}</button>
       </div>
     </foreignObject>`);
@@ -458,15 +644,15 @@ function renderDependencyGraph(
   rightNodes.forEach((node, i) => {
     const y = GRAPH_PAD_TOP + i * GRAPH_ROW_HEIGHT;
     const external = isExternalModule(node.filePath);
-    const label = escHtml(truncateGraphLabel(external ? node.name : shortPath(node.filePath)));
+    const label = escHtml(external ? node.name : shortPath(node.filePath));
     if (external) {
-      parts.push(`<foreignObject x="432" y="${y}" width="120" height="28">
+      parts.push(`<foreignObject x="${DEP_GRAPH_RIGHT_COL_X}" y="${y}" width="${DEP_GRAPH_RIGHT_COL_W}" height="28" data-graph-col="right" data-graph-row="${i}">
         <div xmlns="http://www.w3.org/1999/xhtml" class="dep-graph-fo">
           <span class="dep-graph-node dep-graph-node--external">${label}</span>
         </div>
       </foreignObject>`);
     } else {
-      parts.push(`<foreignObject x="432" y="${y}" width="120" height="28">
+      parts.push(`<foreignObject x="${DEP_GRAPH_RIGHT_COL_X}" y="${y}" width="${DEP_GRAPH_RIGHT_COL_W}" height="28" data-graph-col="right" data-graph-row="${i}">
         <div xmlns="http://www.w3.org/1999/xhtml" class="dep-graph-fo">
           <button type="button" class="dep-graph-node dep-graph-node--dep" data-file="${escAttr(node.filePath)}">${label}</button>
         </div>
@@ -476,16 +662,18 @@ function renderDependencyGraph(
 
   if (leftOverflow > 0) {
     const y = GRAPH_PAD_TOP + leftNodes.length * GRAPH_ROW_HEIGHT + 8;
-    parts.push(`<text class="dep-graph-overflow" x="70" y="${y}" text-anchor="middle">+${leftOverflow} more</text>`);
+    const leftOverflowX = DEP_GRAPH_LEFT_COL_X + DEP_GRAPH_LEFT_COL_W / 2;
+    parts.push(`<text class="dep-graph-overflow" x="${leftOverflowX}" y="${y}" text-anchor="middle">+${leftOverflow} more</text>`);
   }
   if (rightOverflow > 0) {
     const y = GRAPH_PAD_TOP + rightNodes.length * GRAPH_ROW_HEIGHT + 8;
-    parts.push(`<text class="dep-graph-overflow" x="490" y="${y}" text-anchor="middle">+${rightOverflow} more</text>`);
+    const rightOverflowX = DEP_GRAPH_RIGHT_COL_X + DEP_GRAPH_RIGHT_COL_W / 2;
+    parts.push(`<text class="dep-graph-overflow" x="${rightOverflowX}" y="${y}" text-anchor="middle">+${rightOverflow} more</text>`);
   }
 
   return `<div class="dep-subsection dep-subsection--flow">
   <div class="dep-subsection-label">Dependency Flow</div>
-  <div class="dep-graph-wrap" id="dep-graph" data-symbol-name="${escAttr(symbolName)}">
+  <div class="dep-graph-wrap" id="dep-graph" data-symbol-name="${escAttr(symbolName)}" data-source-file="${escAttr(sourceFilePath)}">
     <svg class="dep-graph-svg" id="dep-graph-svg" width="${GRAPH_WIDTH}" height="${height}" viewBox="0 0 ${GRAPH_WIDTH} ${height}" aria-label="Dependency flow diagram">
       ${parts.join('\n      ')}
     </svg>
@@ -497,13 +685,12 @@ function renderCoChangeHeatmap(git: GitHistory): string {
   const items = git.coChangedWith ?? [];
   if (items.length === 0) return '';
 
-  const maxCount = items[0]!.count;
-  const rows = items.map((item) => {
-    const pct = Math.round((item.count / maxCount) * 100);
+  const rows = items.map((item, index) => {
+    const countLabel = item.count === 1 ? '1 commit' : `${item.count} commits`;
     return `<button type="button" class="cochange-row" data-file="${escAttr(item.filePath)}">
+  <span class="cochange-rank">#${index + 1}</span>
   <span class="cochange-label">${escHtml(item.relativePath)}</span>
-  <span class="cochange-bar-wrap"><span class="cochange-bar" style="width:${pct}%"></span></span>
-  <span class="cochange-count">${item.count}</span>
+  <span class="cochange-count">${escHtml(countLabel)}</span>
 </button>`;
   }).join('');
 
@@ -511,11 +698,6 @@ function renderCoChangeHeatmap(git: GitHistory): string {
   <div class="dep-subsection-label">Change Coupling</div>
   <div class="cochange-list">${rows}</div>
 </div>`;
-}
-
-function truncateGraphLabel(label: string, max = 18): string {
-  if (label.length <= max) return label;
-  return `${label.slice(0, max - 1)}…`;
 }
 
 function isExternalModule(filePath: string): boolean {
